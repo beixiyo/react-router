@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+    },
+    "jsx": "react-jsx",
+    "outDir": "dist-lib",
+    "declaration": true,
+    "declarationDir": "./dist-lib",
+    "emitDeclarationOnly": true,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "./src/router"
+  ],
+  "exclude": [
+    "./src/router/**/*.test.ts",
+    "./src/router/**/*.test.tsx"
+  ]
+}
