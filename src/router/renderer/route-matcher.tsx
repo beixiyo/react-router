@@ -84,6 +84,18 @@ export function createRouteElement(route: RouteObject, match?: MatchResult, opti
     )
   }
 
+  // 对于根路由（path: '/'），即使没有 children，也使用 OutletContext 包裹
+  // 这样可以防止根路由组件内部使用 <Outlet /> 时导致无限递归
+  if (route.path === '/') {
+    return (
+      <OutletContext.Provider value={{ parentRoute: route, parentPath: route.path }}>
+        <ParamsContext.Provider value={params}>
+          { renderRouteComponent(route.component, params, loadingComponent) }
+        </ParamsContext.Provider>
+      </OutletContext.Provider>
+    )
+  }
+
   return renderRouteComponent(route.component, params, loadingComponent)
 }
 
