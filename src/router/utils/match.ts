@@ -171,6 +171,17 @@ export function matchPath(pattern: string, pathname: string, cfg?: RouteConfig):
   const config = mergeRouteConfig(DEFAULT_ROUTE_CONFIG, cfg)
   validateRouteConfig(config)
 
+// 特殊处理根路径在允许部分匹配时的情况：
+// path-to-regexp 对 `'/'` 模式即便在 `end: false` 时也只会匹配精确的 `'/'`
+// 这会导致带 children 的根路由无法被识别成“父节点”，下游像 NestedOutlet
+// 这样的组件就拿不到正确的 parentRoute，从而阻断子路由渲染或造成递归。
+// 根路径本身没有参数，因此在允许部分匹配时可以直接认为命中。
+  if (pattern === '/' && config.end === false) {
+    return pathname.startsWith('/')
+      ? {}
+      : null
+  }
+
   const normalized = normalizePattern(pattern)
   const options: MatchOptions & PathToRegexpOptions = {
     sensitive: !!config.sensitive,

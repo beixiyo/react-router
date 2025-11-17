@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import type { LocationLike, RouteObject, RouterOptions } from '../types'
 import { useMemo } from 'react'
+import { OutletContext } from '../context'
 import { renderRouteComponent } from '../renderer/route-loader'
 import { renderRouteChain } from '../renderer/route-matcher'
 import { matchRoutes } from '../utils'
@@ -47,7 +48,24 @@ export function NestedOutlet({
     // 使用 match 中的参数（已经包含了所有路由链的参数）
     const params = match?.params ?? {}
     const loadingComponent = childRouteObj.loadingComponent ?? options.loadingComponent
-    return renderRouteComponent(childRouteObj.component, params, loadingComponent, childRouteObj.layoutComponent)
+    const element = renderRouteComponent(
+      childRouteObj.component,
+      params,
+      loadingComponent,
+      childRouteObj.layoutComponent,
+    )
+
+    // 如果子路由本身还有 children（尤其是 path === '/' 的根节点），必须提供 OutletContext
+    // 否则该子路由组件中的 <Outlet /> 会被视为根 Outlet，重新触发 matchRoutes，最终造成无限递归
+    if ((childRouteObj.children && childRouteObj.children.length > 0) || childRouteObj.path === '/') {
+      return (
+        <OutletContext.Provider value={{ parentRoute: childRouteObj, parentPath: childRouteObj.path }}>
+          { element }
+        </OutletContext.Provider>
+      )
+    }
+
+    return element
   }, [parentRoute, location.pathname, options.routeConfig, options.loadingComponent])
 
   return childRoute || null
