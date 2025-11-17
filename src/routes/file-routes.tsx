@@ -1,3 +1,4 @@
+import type { RouteObject } from '@/router'
 /**
  * 从文件系统自动生成的路由配置
  */
@@ -6,7 +7,6 @@ import { lazy } from 'react'
 import { createAuthMiddleware } from '../middlewares'
 import { getUser } from '../store/auth'
 import Home from '../views'
-import type { RouteObject } from '@/router'
 
 // 创建中间件
 const requireLogin = createAuthMiddleware(() => !!getUser(), '/login')
@@ -49,6 +49,6 @@ export const fileRoutes: RouteObject[] = [
           return route
         }
       },
-    })
-  }
+    }),
+  },
 ]

@@ -58,7 +58,6 @@ export function RouterProvider({
       console.error('[Router] Initial navigation error:', error)
     })
     // 只在首次挂载和基础路径变化时运行
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base])
 
   useEffect(() => {
@@ -105,9 +104,9 @@ export function RouterProvider({
   const configValue = useMemo(() => ({ routes, options }), [routes, options])
 
   return (
-    <RouterCtx.Provider value={ value }>
-      <LocationCtx.Provider value={ location }>
-        <RouterConfigCtx.Provider value={ configValue }>
+    <RouterCtx.Provider value={value}>
+      <LocationCtx.Provider value={location}>
+        <RouterConfigCtx.Provider value={configValue}>
           { children }
         </RouterConfigCtx.Provider>
       </LocationCtx.Provider>

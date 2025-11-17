@@ -1,5 +1,6 @@
 import type { LocationLike, RouteObject, RouterOptions } from '../types'
 import { Activity, useMemo } from 'react'
+import { LocationCtx } from '../context'
 import { getCachedElement, updateCache, useCacheConfig, useCacheMap } from '../renderer/cache'
 import { createRouteElement, emptyElement } from '../renderer/route-matcher'
 import { matchRoutes } from '../utils'
@@ -24,7 +25,7 @@ export function RootOutlet({
   const currentElement = useMemo(() => {
     // 如果缓存启用且缓存命中，直接返回缓存中的元素
     if (eligible && effectiveLimit !== undefined) {
-      const cached = getCachedElement(cache, cacheKey)
+      const cached = getCachedElement(cache, cacheKey, location)
       if (cached) {
         return cached
       }
@@ -40,7 +41,7 @@ export function RootOutlet({
 
     // 如果缓存启用，将新元素存入缓存
     if (eligible && effectiveLimit !== undefined) {
-      updateCache(cache, cacheKey, element, effectiveLimit)
+      updateCache(cache, cacheKey, element, location, effectiveLimit)
     }
 
     return element
@@ -49,14 +50,15 @@ export function RootOutlet({
   return (
     <>
       { [...cache.values()].map(item => (
-        <Activity
-          key={item.key}
-          mode={item.key === cacheKey && eligible
-            ? 'visible'
-            : 'hidden'}
-        >
-          { item.element }
-        </Activity>
+        <LocationCtx.Provider key={item.key} value={item.location}>
+          <Activity
+            mode={item.key === cacheKey && eligible
+              ? 'visible'
+              : 'hidden'}
+          >
+            { item.element }
+          </Activity>
+        </LocationCtx.Provider>
       )) }
       { !eligible && (
         <Activity key="__current__" mode="visible">

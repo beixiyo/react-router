@@ -9,6 +9,7 @@ export interface CacheEntry {
   key: string
   element: ReactElement
   lastShown: number
+  location: LocationLike
 }
 
 export type CacheMap = LRUCache<string, CacheEntry>
@@ -72,6 +73,7 @@ export function updateCache(
   cache: CacheMap,
   cacheKey: string,
   element: ReactElement,
+  location: LocationLike,
   effectiveLimit?: number,
 ) {
   if (effectiveLimit === undefined)
@@ -84,7 +86,12 @@ export function updateCache(
 
   // 如果不存在，添加新元素；LRUCache 会自动处理 LRU 逻辑
   if (!cache.has(cacheKey)) {
-    cache.set(cacheKey, { key: cacheKey, element, lastShown: Date.now() })
+    cache.set(cacheKey, {
+      key: cacheKey,
+      element,
+      lastShown: Date.now(),
+      location: { ...location },
+    })
   }
 }
 
@@ -92,11 +99,18 @@ export function updateCache(
  * 获取缓存中的元素（如果存在）
  * LRUCache 的 get 方法会自动将访问的项移到最新位置
  */
-export function getCachedElement(cache: CacheMap, cacheKey: string): ReactElement | undefined {
+export function getCachedElement(
+  cache: CacheMap,
+  cacheKey: string,
+  currentLocation?: LocationLike,
+): ReactElement | undefined {
   const entry = cache.get(cacheKey)
   if (entry) {
     // 更新 lastShown 时间戳（虽然 LRUCache 已经处理了顺序，但保留此字段以保持兼容性）
     entry.lastShown = Date.now()
+    if (currentLocation) {
+      entry.location = { ...currentLocation }
+    }
     return entry.element
   }
   return undefined

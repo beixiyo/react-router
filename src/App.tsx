@@ -1,6 +1,6 @@
 import { NavLink, Outlet, RouterProvider } from './router'
 import * as router from './router/utils/navigate'
-import { fileRoutes, manusRoutes, routerOptions } from './routes'
+import { fileRoutes, routerOptions } from './routes'
 import './App.css'
 
 function AppNavLink({ to, children }: {

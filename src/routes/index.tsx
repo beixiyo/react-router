@@ -5,7 +5,7 @@ export * from './file-routes'
 export * from './manus-routes'
 
 export const routerOptions: RouterOptions = {
-  cache: { limit: 2, include: ['/', '/profile'] },
+  cache: { limit: 2, include: ['/', '/profile', /^\/nest-no-param/] },
   // loadingComponent: () => <div>全局自定义 Loading</div>,
 
   // ========== 全局前置守卫 ==========
