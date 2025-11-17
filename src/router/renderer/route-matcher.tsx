@@ -38,7 +38,7 @@ export function renderRouteChain(
 
   // 如果是最后一个路由，直接渲染组件（不需要 Outlet）
   if (isLast) {
-    return renderRouteComponent(route.component, params, loadingComponent)
+    return renderRouteComponent(route.component, params, loadingComponent, route.layoutComponent)
   }
 
   // 如果不是最后一个路由，需要渲染父路由
@@ -47,7 +47,7 @@ export function renderRouteChain(
   return (
     <OutletContext.Provider value={{ parentRoute: route, parentPath: route.path }}>
       <ParamsContext.Provider value={params}>
-        { renderRouteComponent(route.component, params, loadingComponent) }
+        { renderRouteComponent(route.component, params, loadingComponent, route.layoutComponent) }
       </ParamsContext.Provider>
     </OutletContext.Provider>
   )
@@ -78,7 +78,7 @@ export function createRouteElement(route: RouteObject, match?: MatchResult, opti
     return (
       <OutletContext.Provider value={{ parentRoute: route, parentPath: route.path }}>
         <ParamsContext.Provider value={params}>
-          { renderRouteComponent(route.component, params, loadingComponent) }
+          { renderRouteComponent(route.component, params, loadingComponent, route.layoutComponent) }
         </ParamsContext.Provider>
       </OutletContext.Provider>
     )
@@ -90,13 +90,13 @@ export function createRouteElement(route: RouteObject, match?: MatchResult, opti
     return (
       <OutletContext.Provider value={{ parentRoute: route, parentPath: route.path }}>
         <ParamsContext.Provider value={params}>
-          { renderRouteComponent(route.component, params, loadingComponent) }
+          { renderRouteComponent(route.component, params, loadingComponent, route.layoutComponent) }
         </ParamsContext.Provider>
       </OutletContext.Provider>
     )
   }
 
-  return renderRouteComponent(route.component, params, loadingComponent)
+  return renderRouteComponent(route.component, params, loadingComponent, route.layoutComponent)
 }
 
 /**

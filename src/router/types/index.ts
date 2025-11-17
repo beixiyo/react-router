@@ -52,6 +52,8 @@ export interface RouteObject {
   config?: RouteConfig
   /** 懒加载时的加载组件，覆盖全局配置 */
   loadingComponent?: ReactElement | ComponentType<any>
+  /** 布局组件：用于包裹当前路由组件的外层容器 */
+  layoutComponent?: ReactElement | ComponentType<any>
 }
 
 /**

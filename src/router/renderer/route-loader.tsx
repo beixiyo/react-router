@@ -24,6 +24,27 @@ function resolveLoadingComponent(loadingComponent?: ReactElement | ComponentType
 }
 
 /**
+ * 使用布局组件包裹内容
+ * - 支持传入 ReactElement 或 ComponentType 作为布局
+ * - 如果未提供布局，直接返回原内容
+ */
+function wrapWithLayout(children: ReactElement, layout?: ReactElement | ComponentType<any>): ReactElement {
+  if (!layout)
+    return children
+
+  // 已是 ReactElement，则复用其 props 并将 content 作为 children
+  if (typeof layout === 'object' && 'type' in layout && 'props' in layout) {
+    return createElement(layout.type as any, (layout as any).props, children)
+  }
+  // 是组件类型，则直接作为容器渲染
+  if (typeof layout === 'function') {
+    const Layout = layout as ComponentType<any>
+    return createElement(Layout, null, children)
+  }
+  return children
+}
+
+/**
  * 渲染路由组件（支持懒加载）
  * 支持两种懒加载形式：
  * 1. LazyExoticComponent（用户使用 React.lazy()）- 推荐方式
@@ -38,17 +59,21 @@ export function renderRouteComponent(
   component: RouteComponent,
   params: Record<string, string | string[]> = {},
   loadingComponent?: ReactElement | ComponentType<any>,
+  layoutComponent?: ReactElement | ComponentType<any>,
 ): ReactElement {
   const fallback = resolveLoadingComponent(loadingComponent)
 
   // 如果已经是 LazyExoticComponent，需要用 Suspense 包裹
   if (isLazyExoticComponent(component)) {
     const LazyCmp = component
+    const content = (
+      <Suspense fallback={fallback}>
+        <LazyCmp />
+      </Suspense>
+    )
     return (
       <ParamsContext.Provider value={params}>
-        <Suspense fallback={fallback}>
-          <LazyCmp />
-        </Suspense>
+        { wrapWithLayout(content, layoutComponent) }
       </ParamsContext.Provider>
     )
   }
@@ -60,9 +85,12 @@ export function renderRouteComponent(
     if (!isClassComponent) {
       // 不是类组件，可能是函数组件或动态导入函数
       // 使用稳定的包装组件来检测和处理
+      const content = (
+        <ComponentWrapper component={component} loadingComponent={loadingComponent} />
+      )
       return (
         <ParamsContext.Provider value={params}>
-          <ComponentWrapper component={component} loadingComponent={loadingComponent} />
+          { wrapWithLayout(content, layoutComponent) }
         </ParamsContext.Provider>
       )
     }
@@ -70,9 +98,10 @@ export function renderRouteComponent(
 
   // 普通组件或类组件直接渲染
   const Cmp = component as ComponentType<any>
+  const content = <Cmp />
   return (
     <ParamsContext.Provider value={params}>
-      <Cmp />
+      { wrapWithLayout(content, layoutComponent) }
     </ParamsContext.Provider>
   )
 }

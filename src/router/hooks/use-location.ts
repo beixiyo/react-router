@@ -1,6 +1,6 @@
+import type { LocationLike } from '../types'
 import { useContext } from 'react'
 import { LocationCtx } from '../context'
-import type { LocationLike } from '../types'
 
 /**
  * 获取当前位置

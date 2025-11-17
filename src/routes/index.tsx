@@ -1,6 +1,9 @@
 import type { GuardNext, NavigationGuardContext, RouterOptions } from '@/router'
 import { getUser } from '@/store/auth'
 
+export * from './file-routes'
+export * from './manus-routes'
+
 export const routerOptions: RouterOptions = {
   cache: { limit: 2, include: ['/', '/profile'] },
   // loadingComponent: () => <div>全局自定义 Loading</div>,

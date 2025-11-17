@@ -50,10 +50,10 @@ export function RootOutlet({
     <>
       { [...cache.values()].map(item => (
         <Activity
-          key={ item.key }
-          mode={ item.key === cacheKey && eligible
+          key={item.key}
+          mode={item.key === cacheKey && eligible
             ? 'visible'
-            : 'hidden' }
+            : 'hidden'}
         >
           { item.element }
         </Activity>

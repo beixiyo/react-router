@@ -17,13 +17,13 @@ export function Link({
   const router = useRouter()
   return (
     <a
-      href={ to }
-      { ...rest }
-      onClick={ (e) => {
+      href={to}
+      {...rest}
+      onClick={(e) => {
         e.preventDefault()
         router?.navigate(to)
         onClick?.(e)
-      } }
+      }}
     >
       { children }
     </a>
@@ -67,14 +67,14 @@ export function NavLink({
 
   return (
     <a
-      href={ to }
-      className={ cls }
-      { ...rest }
-      onClick={ (e) => {
+      href={to}
+      className={cls}
+      {...rest}
+      onClick={(e) => {
         e.preventDefault()
         router?.navigate(to)
         onClick?.(e)
-      } }
+      }}
     >
       { children }
       { isActive && !activeClassName && (

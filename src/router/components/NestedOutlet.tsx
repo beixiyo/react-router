@@ -47,7 +47,7 @@ export function NestedOutlet({
     // 使用 match 中的参数（已经包含了所有路由链的参数）
     const params = match?.params ?? {}
     const loadingComponent = childRouteObj.loadingComponent ?? options.loadingComponent
-    return renderRouteComponent(childRouteObj.component, params, loadingComponent)
+    return renderRouteComponent(childRouteObj.component, params, loadingComponent, childRouteObj.layoutComponent)
   }, [parentRoute, location.pathname, options.routeConfig, options.loadingComponent])
 
   return childRoute || null
