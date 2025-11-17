@@ -1,14 +1,60 @@
-import type { ReactElement } from 'react'
+import { useEffect, useRef } from 'react'
 
 /**
  * 默认的加载回退组件
  * 用于 Suspense 的 fallback 属性
  */
-export const LoadingFallback: ReactElement = (
-  <div className="p-4 text-neutral-400 flex items-center justify-center min-h-[200px]">
-    <div className="text-center">
-      <div className="inline-block w-8 h-8 border-4 border-white/20 border-t-white/60 rounded-full animate-spin mb-2"></div>
-      <div>加载中...</div>
+export function LoadingFallback() {
+  const spinnerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const spinner = spinnerRef.current
+    if (!spinner)
+      return
+
+    // 使用 Web Animations API 创建旋转动画
+    const animation = spinner.animate(
+      [
+        { transform: 'rotate(0deg)' },
+        { transform: 'rotate(360deg)' },
+      ],
+      {
+        duration: 1000,
+        iterations: Infinity,
+        easing: 'linear',
+      },
+    )
+
+    return () => {
+      animation.cancel()
+    }
+  }, [])
+
+  return (
+    <div
+      style={{
+        padding: '1rem',
+        color: '#a3a3a3',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '200px',
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <div
+          ref={spinnerRef}
+          style={{
+            display: 'inline-block',
+            width: '2rem',
+            height: '2rem',
+            border: '4px solid rgba(255, 255, 255, 0.2)',
+            borderTopColor: 'rgba(255, 255, 255, 0.6)',
+            borderRadius: '50%',
+            marginBottom: '0.5rem',
+          }}
+        />
+      </div>
     </div>
-  </div>
-)
+  )
+}

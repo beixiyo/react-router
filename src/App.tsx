@@ -10,7 +10,7 @@ function AppNavLink({ to, children }: {
 }) {
   return (
     <NavLink
-      to={ to }
+      to={to}
       className="relative px-4 py-2 rounded-full transition-colors border"
       activeClassName="border-white/20 bg-white/10 text-white"
       inactiveClassName="border-white/10 bg-white/5 text-white hover:bg-white/10"
@@ -27,7 +27,7 @@ function AppNavLink({ to, children }: {
  */
 export default function App() {
   return (
-    <RouterProvider routes={ fileRoutes } options={ routerOptions }>
+    <RouterProvider routes={fileRoutes} options={routerOptions}>
       <GlobalRouter />
 
       <header className="sticky top-0 z-10 backdrop-blur border-b border-white/10">

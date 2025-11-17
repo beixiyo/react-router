@@ -39,15 +39,16 @@ export function NestedOutlet({
       if (currentIndex >= 0 && currentIndex < match.routeChain.length - 1) {
         // 还有更深层的嵌套，递归渲染
         const remainingChain = match.routeChain.slice(currentIndex)
-        return renderRouteChain(remainingChain, 0, match)
+        return renderRouteChain(remainingChain, 0, match, options)
       }
     }
 
     // 没有更深层的嵌套，直接渲染子路由组件
     // 使用 match 中的参数（已经包含了所有路由链的参数）
     const params = match?.params ?? {}
-    return renderRouteComponent(childRouteObj.component, params)
-  }, [parentRoute, location.pathname, options.routeConfig])
+    const loadingComponent = childRouteObj.loadingComponent ?? options.loadingComponent
+    return renderRouteComponent(childRouteObj.component, params, loadingComponent)
+  }, [parentRoute, location.pathname, options.routeConfig, options.loadingComponent])
 
   return childRoute || null
 }

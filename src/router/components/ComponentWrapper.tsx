@@ -1,6 +1,6 @@
 import type { ComponentType, LazyExoticComponent, ReactElement } from 'react'
 import type { RouteComponent } from '../types'
-import { lazy, memo, Suspense } from 'react'
+import { createElement, lazy, memo, Suspense } from 'react'
 import { LoadingFallback } from './LoadingFallback'
 
 /**
@@ -33,12 +33,37 @@ export function isLazyExoticComponent(component: RouteComponent): component is L
 }
 
 /**
+ * 解析 loadingComponent，支持 ReactElement 或 ComponentType
+ */
+function resolveLoadingComponent(loadingComponent?: ReactElement | ComponentType<any>): ReactElement {
+  if (!loadingComponent) {
+    return createElement(LoadingFallback)
+  }
+  // 如果已经是 ReactElement，直接返回
+  if (typeof loadingComponent === 'object' && 'type' in loadingComponent && 'props' in loadingComponent) {
+    return loadingComponent
+  }
+  // 如果是 ComponentType，创建元素
+  if (typeof loadingComponent === 'function') {
+    return createElement(loadingComponent)
+  }
+  return createElement(LoadingFallback)
+}
+
+/**
  * 稳定的包装组件，用于检测和处理动态导入函数
  * 使用 memo 确保组件身份稳定，不影响缓存
  * 通过 props 传递 component，确保组件定义稳定
  */
-export const ComponentWrapper = memo(({ component }: { component: RouteComponent }) => {
+export const ComponentWrapper = memo(({
+  component,
+  loadingComponent,
+}: {
+  component: RouteComponent
+  loadingComponent?: ReactElement | ComponentType<any>
+}) => {
   const Cmp = component as ComponentType<any>
+  const fallback = resolveLoadingComponent(loadingComponent)
 
   // 尝试调用函数来检测是否是动态导入
   // 注意：我们在组件渲染上下文中，所以这是安全的
@@ -49,7 +74,7 @@ export const ComponentWrapper = memo(({ component }: { component: RouteComponent
     if (result && typeof result.then === 'function') {
       const LazyCmp = lazy(() => result as Promise<{ default: ComponentType<any> }>)
       return (
-        <Suspense fallback={LoadingFallback}>
+        <Suspense fallback={fallback}>
           <LazyCmp />
         </Suspense>
       )
@@ -69,7 +94,8 @@ export const ComponentWrapper = memo(({ component }: { component: RouteComponent
     return <Cmp />
   }
 }, (prevProps, nextProps) => {
-  // 自定义比较函数：只有当 component 引用改变时才重新渲染
+  // 自定义比较函数：只有当 component 或 loadingComponent 引用改变时才重新渲染
   // 这确保相同组件引用时，React 会复用组件实例，保持缓存
   return prevProps.component === nextProps.component
+    && prevProps.loadingComponent === nextProps.loadingComponent
 })

@@ -36,7 +36,7 @@ export function RootOutlet({
       return emptyElement('Not Found')
 
     // createRouteElement 会自动处理嵌套路由，递归渲染整个路由链
-    const element = createRouteElement(match.route, match)
+    const element = createRouteElement(match.route, match, options)
 
     // 如果缓存启用，将新元素存入缓存
     if (eligible && effectiveLimit !== undefined) {

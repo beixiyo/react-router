@@ -50,6 +50,8 @@ export interface RouteObject {
   meta?: Record<string, unknown>
   /** 路径匹配配置，覆盖全局 */
   config?: RouteConfig
+  /** 懒加载时的加载组件，覆盖全局配置 */
+  loadingComponent?: ReactElement | ComponentType<any>
 }
 
 /**
@@ -117,6 +119,8 @@ export interface RouterOptions {
   beforeResolve?: NavigationGuard
   /** 全局后置守卫，在路由跳转后执行 */
   afterEach?: AfterEachGuard
+  /** 全局懒加载时的加载组件 */
+  loadingComponent?: ReactElement | ComponentType<any>
 }
 
 /**

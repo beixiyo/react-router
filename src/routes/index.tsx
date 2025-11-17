@@ -3,6 +3,7 @@ import { getUser } from '@/store/auth'
 
 export const routerOptions: RouterOptions = {
   cache: { limit: 2, include: ['/', '/profile'] },
+  // loadingComponent: () => <div>全局自定义 Loading</div>,
 
   // ========== 全局前置守卫 ==========
   beforeEach: async (to: NavigationGuardContext, from: NavigationGuardContext, next: GuardNext) => {

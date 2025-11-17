@@ -1,9 +1,27 @@
 import type { ComponentType, ReactElement } from 'react'
 import type { RouteComponent } from '../types'
-import { Suspense } from 'react'
+import { createElement, Suspense } from 'react'
 import { ComponentWrapper, isLazyExoticComponent } from '../components/ComponentWrapper'
 import { LoadingFallback } from '../components/LoadingFallback'
 import { ParamsContext } from '../context'
+
+/**
+ * 解析 loadingComponent，支持 ReactElement 或 ComponentType
+ */
+function resolveLoadingComponent(loadingComponent?: ReactElement | ComponentType<any>): ReactElement {
+  if (!loadingComponent) {
+    return createElement(LoadingFallback)
+  }
+  // 如果已经是 ReactElement，直接返回
+  if (typeof loadingComponent === 'object' && 'type' in loadingComponent && 'props' in loadingComponent) {
+    return loadingComponent
+  }
+  // 如果是 ComponentType，创建元素
+  if (typeof loadingComponent === 'function') {
+    return createElement(loadingComponent)
+  }
+  return createElement(LoadingFallback)
+}
 
 /**
  * 渲染路由组件（支持懒加载）
@@ -13,15 +31,22 @@ import { ParamsContext } from '../context'
  *
  * @param component 路由组件（可能是普通组件、懒加载组件或动态导入函数）
  * @param params 路由参数
+ * @param loadingComponent 懒加载时的加载组件（可选，支持 ReactElement 或 ComponentType）
  * @returns React 元素
  */
-export function renderRouteComponent(component: RouteComponent, params: Record<string, string | string[]> = {}): ReactElement {
+export function renderRouteComponent(
+  component: RouteComponent,
+  params: Record<string, string | string[]> = {},
+  loadingComponent?: ReactElement | ComponentType<any>,
+): ReactElement {
+  const fallback = resolveLoadingComponent(loadingComponent)
+
   // 如果已经是 LazyExoticComponent，需要用 Suspense 包裹
   if (isLazyExoticComponent(component)) {
     const LazyCmp = component
     return (
       <ParamsContext.Provider value={params}>
-        <Suspense fallback={LoadingFallback}>
+        <Suspense fallback={fallback}>
           <LazyCmp />
         </Suspense>
       </ParamsContext.Provider>
@@ -37,7 +62,7 @@ export function renderRouteComponent(component: RouteComponent, params: Record<s
       // 使用稳定的包装组件来检测和处理
       return (
         <ParamsContext.Provider value={params}>
-          <ComponentWrapper component={component} />
+          <ComponentWrapper component={component} loadingComponent={loadingComponent} />
         </ParamsContext.Provider>
       )
     }
