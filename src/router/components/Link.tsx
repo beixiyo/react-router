@@ -1,22 +1,29 @@
-import type { ReactNode } from 'react'
+import type { AnchorHTMLAttributes } from 'react'
 import { useRouter } from '../hooks/use-router'
 
 /**
  * 链接组件
  * @param to 目标路径
  * @param children 子元素
- * @param className 可选的 CSS 类名
  */
-export function Link({ to, children, className }: { to: string, children: ReactNode, className?: string }) {
+export function Link({
+  to,
+  children,
+  onClick,
+  ...rest
+}: {
+  to: string
+} & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>) {
   const router = useRouter()
   return (
     <a
-      href={to}
-      className={className}
-      onClick={(e) => {
+      href={ to }
+      { ...rest }
+      onClick={ (e) => {
         e.preventDefault()
         router?.navigate(to)
-      }}
+        onClick?.(e)
+      } }
     >
       { children }
     </a>
@@ -37,13 +44,13 @@ export function NavLink({
   className,
   activeClassName,
   inactiveClassName,
+  onClick,
+  ...rest
 }: {
   to: string
-  children: ReactNode
-  className?: string
   activeClassName?: string
   inactiveClassName?: string
-}) {
+} & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>) {
   const router = useRouter()
   const isActive = router?.location.pathname === to
 
@@ -60,12 +67,14 @@ export function NavLink({
 
   return (
     <a
-      href={to}
-      className={cls}
-      onClick={(e) => {
+      href={ to }
+      className={ cls }
+      { ...rest }
+      onClick={ (e) => {
         e.preventDefault()
         router?.navigate(to)
-      }}
+        onClick?.(e)
+      } }
     >
       { children }
       { isActive && !activeClassName && (

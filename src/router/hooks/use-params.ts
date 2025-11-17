@@ -23,15 +23,15 @@ export function useParams(): {
   const location = useLocation()
 
   return useMemo(() => {
-    const queryParams = location
+    const queryParams = location?.search
       ? parseQuery(location.search)
       : new URLSearchParams()
-    const hashParams = location
+    const hashParams = location?.hash
       ? parseHash(location.hash)
       : new URLSearchParams()
 
     return {
-      params,
+      params: params ?? {},
       query: searchParamsToObject(queryParams),
       hash: searchParamsToObject(hashParams),
     }
