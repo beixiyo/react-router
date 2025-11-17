@@ -17,6 +17,3 @@ export * from './router'
 
 // 类型定义
 export * from './types'
-
-// 全局导航函数（可在 hook 外调用）
-export { back, navigate, replace } from './utils/navigate'
