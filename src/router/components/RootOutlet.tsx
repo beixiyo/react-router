@@ -47,13 +47,13 @@ export function RootOutlet({
   }, [routes, location.pathname, options.routeConfig, cacheKey, eligible, effectiveLimit, cache])
 
   return (
-    <div>
+    <>
       { [...cache.values()].map(item => (
         <Activity
-          key={item.key}
-          mode={item.key === cacheKey && eligible
+          key={ item.key }
+          mode={ item.key === cacheKey && eligible
             ? 'visible'
-            : 'hidden'}
+            : 'hidden' }
         >
           { item.element }
         </Activity>
@@ -63,6 +63,6 @@ export function RootOutlet({
           { currentElement }
         </Activity>
       ) }
-    </div>
+    </>
   )
 }
