@@ -33,8 +33,7 @@ describe('createRouteElement', () => {
       const params = useContext(ParamsContext)
       return (
         <div>
-          User
-          {params.id}
+          User{params.id}
         </div>
       )
     }
@@ -51,7 +50,7 @@ describe('createRouteElement', () => {
     const element = createRouteElement(route, match)
     const { container } = render(element)
 
-    expect(container.textContent).toBe('User 123')
+    expect(container.textContent).toBe('User123')
   })
 
   it('应该处理有 children 的路由', () => {

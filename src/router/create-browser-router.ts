@@ -6,10 +6,13 @@ import type {
   Middleware,
   MiddlewareContext,
   NavigationGuardContext,
+  Router,
   RouterOptions,
 } from './types'
+import type { NavigateOptions } from './hooks/types'
 import { collectMiddlewares, compose, matchRoutes, normalizePathStartSlash, parseHash, parseQuery, parseUrl, stripBase } from './utils'
 import { GuardManager } from './utils/guard-manager'
+import { buildUrl } from './utils/url'
 
 export function createBrowserRouter(config: CreateBrowserRouterConfig): BrowserRouterInstance {
   const routes = config.routes
@@ -177,31 +180,54 @@ export function createBrowserRouter(config: CreateBrowserRouterConfig): BrowserR
 
   window.addEventListener('popstate', onPop)
 
+  const navigationAdapter: Router = {
+    navigate: (path: string | number, options?: NavigateOptions) => {
+      if (typeof path === 'number') {
+        if (path === -1) {
+          window.history.back()
+        }
+        else {
+          window.history.go(path)
+        }
+        return
+      }
+      const fullUrl = buildUrl(path, options)
+      const replaceHistory = options?.replace ?? false
+      runNavigation(fullUrl, replaceHistory).catch((error) => {
+        console.error('[Router] Navigation error:', error)
+      })
+    },
+    replace: (path: string | number, options?: NavigateOptions) => {
+      if (typeof path === 'number') {
+        window.history.go(path)
+        return
+      }
+      const fullUrl = buildUrl(path, options)
+      runNavigation(fullUrl, true).catch((error) => {
+        console.error('[Router] Replace navigation error:', error)
+      })
+    },
+    back: () => window.history.back(),
+    get location() {
+      return currentLocation
+    },
+    beforeEach: guard => guardManager.beforeEach(guard),
+    beforeResolve: guard => guardManager.beforeResolve(guard),
+    afterEach: guard => guardManager.afterEach(guard),
+  }
+
   const router: BrowserRouterInstance = {
     id: crypto.randomUUID(),
     routes,
     options,
     base,
-    location: currentLocation,
     getLocation: () => currentLocation,
     subscribe: (listener) => {
       subscribers.add(listener)
       return () => subscribers.delete(listener)
     },
-    navigate: (path: string) => {
-      runNavigation(path, false).catch((error) => {
-        console.error('[Router] Navigation error:', error)
-      })
-    },
-    replace: (path: string) => {
-      runNavigation(path, true).catch((error) => {
-        console.error('[Router] Replace navigation error:', error)
-      })
-    },
-    back: () => window.history.back(),
-    beforeEach: guard => guardManager.beforeEach(guard),
-    beforeResolve: guard => guardManager.beforeResolve(guard),
-    afterEach: guard => guardManager.afterEach(guard),
+
+    ...navigationAdapter,
     dispose: () => {
       if (disposed)
         return

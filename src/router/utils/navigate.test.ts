@@ -111,7 +111,7 @@ describe('navigate', () => {
   it('应该使用全局 router 进行导航', () => {
     navigate('/dashboard')
 
-    expect(mockRouter.navigate).toHaveBeenCalledWith('/dashboard')
+    expect(mockRouter.navigate).toHaveBeenCalledWith('/dashboard', undefined)
   })
 
   it('应该在全局 router 为 null 时警告', () => {
@@ -147,17 +147,19 @@ describe('replace', () => {
     setGlobalRouter(null)
   })
 
-  it('应该调用 router.replace', () => {
+  it('应该通过 navigate 传递 replace 选项', () => {
     replace('/dashboard')
 
-    expect(mockRouter.replace).toHaveBeenCalledWith('/dashboard')
-    expect(mockRouter.navigate).not.toHaveBeenCalled()
+    expect(mockRouter.navigate).toHaveBeenCalledWith('/dashboard', { replace: true })
   })
 
-  it('应该处理路径参数', () => {
+  it('应该透传路径参数选项', () => {
     replace('/users/:id', { params: { id: '123' } })
 
-    expect(mockRouter.replace).toHaveBeenCalledWith('/users/123')
+    expect(mockRouter.navigate).toHaveBeenCalledWith('/users/:id', {
+      params: { id: '123' },
+      replace: true,
+    })
   })
 })
 

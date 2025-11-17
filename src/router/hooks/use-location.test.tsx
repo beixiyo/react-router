@@ -27,6 +27,6 @@ describe('useLocation', () => {
       ),
     })
 
-    expect(result.current).toBeNull()
+    expect(result.current).toEqual({ pathname: '', search: '', hash: '' })
   })
 })

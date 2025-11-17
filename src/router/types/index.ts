@@ -2,6 +2,7 @@
  * 路由与中间件类型定义
  */
 import type { ComponentType, LazyExoticComponent, ReactElement } from 'react'
+import type { NavigateOptions } from '../hooks/types'
 
 /**
  * 表示一个路由项的配置对象
@@ -160,10 +161,10 @@ export type RemoveGuard = () => void
  * 路由器实例接口
  */
 export interface Router {
-  /** 导航到指定路径 */
-  navigate: (path: string) => void
-  /** 替换当前路径 */
-  replace: (path: string) => void
+  /** 导航到指定路径（支持相对数字与导航选项） */
+  navigate: (to: string | number, options?: NavigateOptions) => void
+  /** 替换当前路径（等价于 navigate + replace 选项） */
+  replace: (to: string | number, options?: NavigateOptions) => void
   /** 返回 */
   back: () => void
   /** 当前位置信息 */

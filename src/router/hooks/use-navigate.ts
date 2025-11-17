@@ -1,7 +1,6 @@
 import type { NavigateOptions } from './types'
 import { useContext } from 'react'
 import { RouterCtx } from '../context'
-import { performNavigate } from '../utils/navigate'
 
 /**
  * 获取导航函数
@@ -53,11 +52,10 @@ export function useNavigate() {
   const router = useContext(RouterCtx)
 
   return (to: string | number, options?: NavigateOptions) => {
-    performNavigate(
-      router,
-      to,
-      options,
-      'useNavigate must be used within a RouterProvider',
-    )
+    if (!router) {
+      console.warn('useNavigate must be used within a RouterProvider')
+      return
+    }
+    router.navigate(to, options)
   }
 }

@@ -94,13 +94,14 @@ export function performNavigate(
  * ```
  */
 export function navigate(to: string | number, options?: NavigateOptions) {
-  performNavigate(
-    globalRouter,
-    to,
-    options,
-    'navigate() called outside of RouterProvider. '
-    + 'Make sure RouterProvider is mounted before calling navigate().',
-  )
+  if (!globalRouter) {
+    console.warn(
+      'navigate() called outside of RouterProvider. '
+      + 'Make sure RouterProvider is mounted before calling navigate().',
+    )
+    return
+  }
+  globalRouter.navigate(to, options)
 }
 
 /**
@@ -117,7 +118,7 @@ export function navigate(to: string | number, options?: NavigateOptions) {
  * replace('/users/:id', { params: { id: '123' } })
  * ```
  */
-export function replace(to: string, options?: Omit<NavigateOptions, 'replace'>) {
+export function replace(to: string | number, options?: Omit<NavigateOptions, 'replace'>) {
   navigate(to, { ...options, replace: true })
 }
 
@@ -132,5 +133,12 @@ export function replace(to: string, options?: Omit<NavigateOptions, 'replace'>) 
  * ```
  */
 export function back() {
-  navigate(-1)
+  if (!globalRouter) {
+    console.warn(
+      'back() called outside of RouterProvider. '
+      + 'Make sure RouterProvider is mounted before calling back().',
+    )
+    return
+  }
+  globalRouter.back()
 }
