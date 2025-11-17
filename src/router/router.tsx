@@ -50,6 +50,17 @@ export function RouterProvider({
     await navigateTo(path, replace, notify)
   }, [navigateTo, notify])
 
+  // 首次加载时，通过 navigateTo 触发一次导航流程，确保会执行 beforeEach 等守卫
+  useEffect(() => {
+    const loc = getLocation(base)
+    const currentPath = loc.pathname + loc.search + loc.hash
+    navigateTo(currentPath, true, notify).catch((error) => {
+      console.error('[Router] Initial navigation error:', error)
+    })
+    // 只在首次挂载和基础路径变化时运行
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [base])
+
   useEffect(() => {
     const onPop = async () => {
       // 获取新的位置
@@ -94,9 +105,9 @@ export function RouterProvider({
   const configValue = useMemo(() => ({ routes, options }), [routes, options])
 
   return (
-    <RouterCtx.Provider value={value}>
-      <LocationCtx.Provider value={location}>
-        <RouterConfigCtx.Provider value={configValue}>
+    <RouterCtx.Provider value={ value }>
+      <LocationCtx.Provider value={ location }>
+        <RouterConfigCtx.Provider value={ configValue }>
           { children }
         </RouterConfigCtx.Provider>
       </LocationCtx.Provider>
