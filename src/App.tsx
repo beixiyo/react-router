@@ -1,6 +1,6 @@
 import { NavLink, Outlet, RouterProvider } from './router'
-import * as router from './router/utils/navigate'
-import { fileRoutes, routerOptions } from './routes'
+import * as routerUtils from './router/utils/navigate'
+import { router } from './routes'
 import './App.css'
 
 function AppNavLink({ to, children }: {
@@ -26,7 +26,7 @@ function AppNavLink({ to, children }: {
  */
 export default function App() {
   return (
-    <RouterProvider routes={fileRoutes} options={routerOptions}>
+    <RouterProvider router={router}>
       <GlobalRouter />
 
       <header className="sticky top-0 z-10 backdrop-blur border-b border-white/10">
@@ -56,6 +56,6 @@ export default function App() {
 }
 
 function GlobalRouter() {
-  (window as any).$router = router
+  (window as any).$router = routerUtils
   return null
 }

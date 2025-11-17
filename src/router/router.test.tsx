@@ -1,6 +1,7 @@
-import type { RouteObject } from './types'
-import { render } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { BrowserRouterInstance, RouteObject } from './types'
+import { cleanup, render } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createBrowserRouter } from './create-browser-router'
 import { RouterProvider } from './router'
 
 // 模拟组件
@@ -34,11 +35,33 @@ function PostDetail({ userId, postId }: { userId?: string, postId?: string }) {
   )
 }
 
+const routers: BrowserRouterInstance[] = []
+
+function renderWithRouterConfig(routes: RouteObject[]) {
+  const router = createBrowserRouter({ routes })
+  routers.push(router)
+  return render(
+    <RouterProvider router={router}>
+      <div data-testid="outlet" />
+    </RouterProvider>,
+  )
+}
+
 describe('routerProvider - 嵌套路由测试', () => {
   beforeEach(() => {
-    window.location = { pathname: '/', search: '', hash: '' } as any
+    window.location = {
+      pathname: '/',
+      search: '',
+      hash: '',
+      origin: 'http://localhost',
+    } as any
     window.history.pushState = vi.fn()
     window.history.replaceState = vi.fn()
+  })
+
+  afterEach(() => {
+    cleanup()
+    routers.splice(0).forEach(router => router.dispose())
   })
 
   describe('基础嵌套路由', () => {
@@ -56,11 +79,7 @@ describe('routerProvider - 嵌套路由测试', () => {
 
       window.location.pathname = '/dashboard/settings'
 
-      render(
-        <RouterProvider routes={routes}>
-          <div data-testid="outlet" />
-        </RouterProvider>,
-      )
+      renderWithRouterConfig(routes)
 
       // 注意：由于我们使用的是模拟的 window.location，实际渲染可能需要更多设置
       // 这里主要测试路由配置的正确性

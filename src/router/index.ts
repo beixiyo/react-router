@@ -8,9 +8,10 @@ export * from './components/Link'
 
 // 组件
 export * from './components/Outlet'
+export * from './create-browser-router'
+
 // Hooks
 export * from './hooks'
-
 // 核心 API
 export * from './router'
 
