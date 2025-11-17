@@ -35,13 +35,14 @@ export function NestedOutlet({
     // 如果子路由还有子路由，需要继续嵌套渲染
     // 检查路由链，看是否还有更深层的嵌套
     if (match.routeChain && match.routeChain.length > 1) {
-      // 找到当前子路由在路由链中的位置
-      const currentIndex = match.routeChain.findIndex(r => r === childRouteObj)
-      if (currentIndex >= 0 && currentIndex < match.routeChain.length - 1) {
-        // 还有更深层的嵌套，递归渲染
-        const remainingChain = match.routeChain.slice(currentIndex)
-        return renderRouteChain(remainingChain, 0, match, options)
-      }
+      // 对于当前 NestedOutlet 对应的 parentRoute，它的匹配子链是相对于自身的：
+      // 例如 parentRoute 为 `/`，当前路径为 `/nest-no-param/sub`，
+      // 则 match.routeChain 形如 [`/nest-no-param`, `/nest-no-param/sub`]
+      //
+      // 我们希望先渲染紧接在 parentRoute 之后的那一层（这里是 `/nest-no-param`），
+      // 由该层组件内部的 <Outlet /> 再继续通过 NestedOutlet 向下递归渲染更深层级。
+      // 因此直接让 renderRouteChain 从整条子链的起点开始渲染即可。
+      return renderRouteChain(match.routeChain, 0, match, options)
     }
 
     // 没有更深层的嵌套，直接渲染子路由组件
