@@ -22,22 +22,17 @@ export default defineConfig(({ mode }) => {
         sourcemap: false,
         emptyOutDir: true,
         outDir: fileURLToPath(new URL('./dist-lib', import.meta.url)),
-
+        lib: {
+          entry: fileURLToPath(new URL('./src/router/index.ts', import.meta.url)),
+          formats: ['es', 'cjs'],
+          fileName: (format) => `index.${format === 'es' ? 'mjs' : 'cjs'}`,
+        },
         rollupOptions: {
           external: ['react', 'react-dom'],
-          input: {
-            index: fileURLToPath(new URL('./src/router/index.ts', import.meta.url))
+          output: {
+            preserveModules: false,
+            exports: 'named',
           },
-          output: [
-            {
-              format: 'es',
-              entryFileNames: '[name].mjs',
-            },
-            {
-              format: 'cjs',
-              entryFileNames: '[name].cjs',
-            },
-          ],
         },
       },
       resolve: {
