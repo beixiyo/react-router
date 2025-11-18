@@ -33,6 +33,15 @@
 
 ## 🚀 最简上手示例
 
+```bash
+# pnpm 安装
+pnpm i @jl-org/react-router
+# npm 安装
+npm i @jl-org/react-router
+# yarn 安装
+yarn add @jl-org/react-router
+```
+
 ```tsx
 import { lazy } from 'react'
 import { RouterProvider, Outlet, createBrowserRouter } from '@jl-org/react-router'
