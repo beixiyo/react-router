@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { BrowserRouterInstance, LocationLike, Router } from './types'
+import type { BrowserRouterInstance, HashRouterInstance, LocationLike, Router } from './types'
 import { useEffect, useMemo, useState } from 'react'
 import { LocationCtx, RouterConfigCtx, RouterCtx } from './context'
 import { setGlobalRouter } from './utils/navigate'
@@ -12,7 +12,7 @@ export function RouterProvider({
   router,
   children,
 }: {
-  router: BrowserRouterInstance
+  router: BrowserRouterInstance | HashRouterInstance
   children: ReactNode
 }) {
   const [location, setLocation] = useState<LocationLike>(() => router.getLocation())

@@ -206,6 +206,34 @@ export interface CreateBrowserRouterConfig {
 }
 
 /**
+ * createHashRouter 返回的实例类型
+ */
+export interface HashRouterInstance extends Router {
+  /** 实例唯一标识 */
+  id: string
+  /** 原始路由配置 */
+  routes: RouteObject[]
+  /** 原始配置选项 */
+  options: RouterOptions
+  /** 基础路径 */
+  base: string
+  /** 读取当前位置 */
+  getLocation: () => LocationLike
+  /** 订阅位置变化 */
+  subscribe: (listener: (location: LocationLike) => void) => () => void
+  /** 释放内部副作用（hashchange 监听等） */
+  dispose: () => void
+}
+
+/**
+ * createHashRouter 的入参
+ */
+export interface CreateHashRouterConfig {
+  routes: RouteObject[]
+  options?: RouterOptions
+}
+
+/**
  * 路由渲染入口的返回结构
  */
 export interface RenderResult {

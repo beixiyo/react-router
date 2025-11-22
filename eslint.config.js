@@ -67,6 +67,8 @@ export default antfu({
     '**/*.jsonc',
     '**/*.json5',
     '**/*.d.ts',
+    '**/*.test.ts',
+    '**/*.test.tsx',
   ],
 
   /**

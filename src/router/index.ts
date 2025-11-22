@@ -9,6 +9,7 @@ export * from './components/Link'
 // 组件
 export * from './components/Outlet'
 export * from './create-browser-router'
+export * from './create-hash-router'
 
 // Hooks
 export * from './hooks'

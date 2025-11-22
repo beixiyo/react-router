@@ -1,9 +1,9 @@
 import type { GuardNext, NavigationGuardContext } from '@/router'
-import { createBrowserRouter } from '@/router'
+import { createHashRouter } from '@/router'
 import { getUser } from '@/store/auth'
 import { fileRoutes } from './file-routes'
 
-export const router = createBrowserRouter({
+export const router = createHashRouter({
   routes: fileRoutes,
   options: {
     cache: { limit: 2, include: ['/', '/profile', /^\/nest-no-param/] },
