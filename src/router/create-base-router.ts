@@ -9,6 +9,7 @@ import type {
   Router,
   RouterOptions,
 } from './types'
+import { nanoid } from 'nanoid'
 import { collectMiddlewares, compose, matchRoutes, normalizePathStartSlash, parseHash, parseQuery, parseUrl } from './utils'
 import { GuardManager } from './utils/guard-manager'
 import { buildUrl } from './utils/url'
@@ -269,7 +270,7 @@ export function createBaseRouter<T extends BaseRouterInstance>(
   }
 
   const router = createRouterInstance({
-    id: crypto.randomUUID(),
+    id: nanoid(),
     routes,
     options,
     base,
