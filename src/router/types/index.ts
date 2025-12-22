@@ -158,13 +158,47 @@ export interface MatchResult {
 export type RemoveGuard = () => void
 
 /**
+ * Push/Replace 选项（类似 Vue Router）
+ */
+export interface PushReplaceOptions {
+  /** 路径参数，默认会合并到当前 params */
+  params?: Record<string, string | number | string[]>
+  /** 查询参数，默认会合并到当前 query */
+  query?: Record<string, string | number | string[] | undefined>
+  /** Hash 参数 */
+  hash?: Record<string, string | number | string[] | undefined> | string
+  /** 是否替换 params（默认 false，即合并） */
+  replaceParams?: boolean
+  /** 是否替换 query（默认 false，即合并） */
+  replaceQuery?: boolean
+}
+
+/**
+ * Push 方法类型定义
+ */
+export type PushMethod = {
+  (options?: PushReplaceOptions): void
+  (path: string, options?: PushReplaceOptions): void
+}
+
+/**
+ * Replace 方法类型定义
+ */
+export type ReplaceMethod = {
+  (options?: PushReplaceOptions): void
+  (path: string, options?: PushReplaceOptions): void
+}
+
+/**
  * 路由器实例接口
  */
 export interface Router {
   /** 导航到指定路径（支持相对数字与导航选项） */
   navigate: (to: string | number, options?: NavigateOptions) => void
-  /** 替换当前路径（等价于 navigate + replace 选项） */
-  replace: (to: string | number, options?: NavigateOptions) => void
+  /** Replace 导航方法，类似 Vue Router，默认合并 params 和 query */
+  replace: ReplaceMethod
+  /** Push 导航方法，类似 Vue Router，默认合并 params 和 query */
+  push: PushMethod
   /** 返回 */
   back: () => void
   /** 当前位置信息 */

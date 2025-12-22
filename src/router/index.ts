@@ -18,3 +18,5 @@ export * from './router'
 
 // 类型定义
 export * from './types'
+
+export { push, replace } from './utils/push-replace'

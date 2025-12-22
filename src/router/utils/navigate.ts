@@ -1,5 +1,5 @@
 import type { NavigateOptions } from '../hooks/types'
-import type { Router } from '../types'
+import type { BrowserRouterInstance, HashRouterInstance, Router } from '../types'
 import { buildUrl } from './url'
 
 /**
@@ -7,6 +7,7 @@ import { buildUrl } from './url'
  * 在 RouterProvider 初始化时会被设置
  */
 let globalRouter: Router | null = null
+let globalRouterInstance: BrowserRouterInstance | HashRouterInstance | null = null
 
 /**
  * 设置全局 router 实例
@@ -17,11 +18,28 @@ export function setGlobalRouter(router: Router | null) {
 }
 
 /**
+ * 设置全局完整 router 实例（包含 routes 等属性）
+ * @internal
+ */
+export function setGlobalRouterInstance(router: BrowserRouterInstance | HashRouterInstance | null) {
+  globalRouterInstance = router
+  globalRouter = router
+}
+
+/**
  * 获取全局 router 实例
  * @internal
  */
 export function getGlobalRouter(): Router | null {
   return globalRouter
+}
+
+/**
+ * 获取全局完整 router 实例（包含 routes 等属性）
+ * @internal
+ */
+export function getGlobalRouterInstance(): BrowserRouterInstance | HashRouterInstance | null {
+  return globalRouterInstance
 }
 
 /**

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { BrowserRouterInstance, HashRouterInstance, LocationLike, Router } from './types'
 import { useEffect, useMemo, useState } from 'react'
 import { LocationCtx, RouterConfigCtx, RouterCtx } from './context'
-import { setGlobalRouter } from './utils/navigate'
+import { setGlobalRouterInstance } from './utils/navigate'
 
 /**
  * 路由器提供者组件
@@ -24,20 +24,15 @@ export function RouterProvider({
   }, [router])
 
   useEffect(() => {
-    setGlobalRouter(router)
+    setGlobalRouterInstance(router)
     return () => {
-      setGlobalRouter(null)
+      setGlobalRouterInstance(null)
     }
   }, [router])
 
   const routerValue = useMemo<Router>(() => ({
-    navigate: router.navigate,
-    replace: router.replace,
-    back: router.back,
+    ...router,
     location,
-    beforeEach: router.beforeEach,
-    beforeResolve: router.beforeResolve,
-    afterEach: router.afterEach,
   }), [router, location])
 
   const configValue = useMemo(() => ({

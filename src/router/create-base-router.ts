@@ -12,6 +12,7 @@ import type {
 import { nanoid } from 'nanoid'
 import { collectMiddlewares, compose, matchRoutes, normalizePathStartSlash, parseHash, parseQuery, parseUrl } from './utils'
 import { GuardManager } from './utils/guard-manager'
+import { createPushMethod, createReplaceMethod } from './utils/push-replace'
 import { buildUrl } from './utils/url'
 
 /**
@@ -250,16 +251,6 @@ export function createBaseRouter<T extends BaseRouterInstance>(
         console.error('[Router] Navigation error:', error)
       })
     },
-    replace: (path: string | number, options?: NavigateOptions) => {
-      if (typeof path === 'number') {
-        window.history.go(path)
-        return
-      }
-      const fullUrl = buildUrl(path, options)
-      runNavigation(fullUrl, true).catch((error) => {
-        console.error('[Router] Replace navigation error:', error)
-      })
-    },
     back: () => window.history.back(),
     get location() {
       return currentLocation
@@ -267,6 +258,12 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     beforeEach: guard => guardManager.beforeEach(guard),
     beforeResolve: guard => guardManager.beforeResolve(guard),
     afterEach: guard => guardManager.afterEach(guard),
+    replace: () => {
+      // 占位符，将在创建 router 实例后替换
+    },
+    push: () => {
+      // 占位符，将在创建 router 实例后替换
+    },
   }
 
   const router = createRouterInstance({
@@ -289,6 +286,10 @@ export function createBaseRouter<T extends BaseRouterInstance>(
       guardManager.clear()
     },
   })
+
+  // 在创建 router 实例后，绑定 push 和 replace 方法
+  router.push = createPushMethod(router, router)
+  router.replace = createReplaceMethod(router, router)
 
   const initialPath = `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`
   runNavigation(initialPath, true).catch((error) => {

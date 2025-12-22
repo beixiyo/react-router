@@ -30,8 +30,8 @@ export default function App() {
       <GlobalRouter />
 
       <header className="sticky top-0 z-10 backdrop-blur border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <nav className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-2">
+        <div className="mx-auto px-4 py-4 flex items-center justify-between">
+          <nav className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-2 overflow-auto">
             <AppNavLink to="/">Home</AppNavLink>
             <AppNavLink to="/profile">Profile</AppNavLink>
             <AppNavLink to="/dashboard">Dashboard</AppNavLink>
@@ -45,6 +45,7 @@ export default function App() {
             <AppNavLink to="/nested-multi/1">NestedMulti</AppNavLink>
             <AppNavLink to="/login">Login</AppNavLink>
             <AppNavLink to="/guards-example">Guards</AppNavLink>
+            <AppNavLink to="/push-replace">Push/Replace</AppNavLink>
           </nav>
         </div>
       </header>

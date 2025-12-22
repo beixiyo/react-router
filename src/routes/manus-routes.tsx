@@ -8,6 +8,7 @@ import { homeRoutes } from './routes/home'
 import { lazyRoutes } from './routes/lazy'
 import { paramsRoutes } from './routes/params'
 import { profileRoutes } from './routes/profile'
+import { pushReplaceRoutes } from './routes/push-replace'
 
 export const manusRoutes: RouteObject[] = [
   ...homeRoutes,
@@ -19,4 +20,5 @@ export const manusRoutes: RouteObject[] = [
   ...lazyRoutes,
   ...paramsRoutes,
   ...guardsExampleRoutes,
+  ...pushReplaceRoutes,
 ]
