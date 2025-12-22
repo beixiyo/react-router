@@ -70,7 +70,7 @@ function processNavigation(
   options?: PushReplaceOptions,
   isReplace: boolean = false,
 ): void {
-  const location = router.location
+  const location = routerInstance.getLocation()
   const currentQuery = location?.search
     ? searchParamsToObject(parseQuery(location.search))
     : {}

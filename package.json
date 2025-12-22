@@ -1,6 +1,6 @@
 {
   "name": "@jl-org/react-router",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "type": "module",
   "main": "./dist-lib/index.cjs",
   "module": "./dist-lib/index.mjs",

@@ -45,7 +45,7 @@ export function RootOutlet({
     }
 
     return element
-  }, [routes, location.pathname, options.routeConfig, cacheKey, eligible, effectiveLimit, cache])
+  }, [routes, location.pathname, location.search, location.hash, location.hash, options.routeConfig, cacheKey, eligible, effectiveLimit, cache])
 
   return (
     <>
