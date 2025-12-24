@@ -66,6 +66,7 @@ const router = createBrowserRouter({
     },
   ],
   options: {
+    loadingComponent: // YourLoading,
     cache: { limit: 5, include: ['/', '/dashboard'] },
     beforeEach: async (to, _from, next) => {
       console.log('🔒 entering', to.to.pathname)
@@ -109,6 +110,7 @@ const router = createBrowserRouter({
     cache?: boolean | { limit?: number; include?: (string | RegExp)[]; exclude?: (string | RegExp)[] },
     cacheKey?: (location: LocationLike) => string,
     routeConfig?: RouteConfig,
+    loadingComponent?: ReactElement | ComponentType,
     beforeEach?: NavigationGuard,
     beforeResolve?: NavigationGuard,
     afterEach?: AfterEachGuard,
@@ -121,6 +123,7 @@ const router = createBrowserRouter({
 - `component`: React 组件或懒加载函数
 - `children`: 嵌套路由
 - `meta`: 自定义信息（如 `title`, `requiresAuth`）
+- `loadingComponent`: 懒加载时的加载组件，支持 ReactElement 或 ComponentType，优先级高于全局配置
 - `middlewares`: `Middleware[]`，Koa 风格 `(ctx, next)`，可调用 `ctx.redirect('/login')`
 
 ## 🧭 Router 实例 API
