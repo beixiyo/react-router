@@ -13,7 +13,7 @@ export default function Home() {
       <h2 className="text-3xl font-semibold bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent">Home</h2>
       <input
         value={text}
-        placeholder="输入内容以验证缓存"
+        placeholder="输入内容以验证 Profile 页面缓存"
         onChange={e => setText(e.target.value)}
         className="w-full max-w-lg px-4 py-3 rounded-md border border-white/10 bg-black/40 text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
       />

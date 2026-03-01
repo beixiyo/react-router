@@ -1,10 +1,11 @@
 import type { ReactElement } from 'react'
 import type { LocationLike, RouteObject, RouterOptions } from '../types'
-import { Activity, createElement, useMemo } from 'react'
+import { createElement, useMemo } from 'react'
 import { LocationCtx } from '../context'
 import { getCachedElement, updateCache, useCacheConfig, useCacheMap } from '../renderer/cache'
 import { createRouteElement, emptyElement } from '../renderer/route-matcher'
 import { matchRoutes } from '../utils'
+import { KeepAlive, KeepAliveProvider } from './KeepAlive'
 
 /**
  * 根节点 Outlet：渲染整个路由树
@@ -59,23 +60,18 @@ export function RootOutlet({
   }, [routes, location.pathname, location.search, location.hash, options.routeConfig, options.notFoundComponent, cacheKey, eligible, effectiveLimit, cache])
 
   return (
-    <>
+    <KeepAliveProvider>
       { [...cache.values()].map(item => (
         <LocationCtx.Provider key={item.key} value={item.location}>
-          <Activity
-            mode={item.key === cacheKey && eligible
-              ? 'visible'
-              : 'hidden'}
+          <KeepAlive
+            uniqueKey={item.key}
+            active={item.key === cacheKey && eligible}
           >
             { item.element }
-          </Activity>
+          </KeepAlive>
         </LocationCtx.Provider>
       )) }
-      { !eligible && (
-        <Activity key="__current__" mode="visible">
-          { currentElement }
-        </Activity>
-      ) }
-    </>
+      { !eligible && currentElement }
+    </KeepAliveProvider>
   )
 }

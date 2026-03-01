@@ -5,10 +5,15 @@
  */
 import { randomColor } from '@/utils'
 import { getUser } from '../../store/auth'
+import { useEffect } from 'react'
 
 export default function Profile() {
   const user = getUser()
   const color = randomColor()
+
+  useEffect(() => {
+    console.log('\n\n\n Profile 页面重新渲染 \n\n\n')
+  }, [])
 
   return (
     <div className="space-y-2" style={{ backgroundColor: color }}>
