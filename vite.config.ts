@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
-import { fileURLToPath } from 'url'
+import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
 
 // @ts-ignore
@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
         react(),
         dts({
           root: fileURLToPath(new URL('./src/router', import.meta.url)),
-          tsconfigPath: fileURLToPath(new URL('./tsconfig.lib.json', import.meta.url))
+          tsconfigPath: fileURLToPath(new URL('./tsconfig.lib.json', import.meta.url)),
         }),
       ],
       build: {
@@ -25,10 +25,12 @@ export default defineConfig(({ mode }) => {
         lib: {
           entry: fileURLToPath(new URL('./src/router/index.ts', import.meta.url)),
           formats: ['es', 'cjs'],
-          fileName: (format) => `index.${format === 'es' ? 'mjs' : 'cjs'}`,
+          fileName: format => `index.${format === 'es'
+            ? 'mjs'
+            : 'cjs'}`,
         },
         rollupOptions: {
-          external: ['react', 'react-dom'],
+          external: id => id.startsWith('react'),
           output: {
             preserveModules: false,
             exports: 'named',
