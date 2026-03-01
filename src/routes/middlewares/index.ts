@@ -4,7 +4,7 @@
  * 提供常用的中间件工厂函数，用于业务路由配置。
  * 这些工具依赖路由库的类型系统，但不属于路由核心库。
  */
-import type { Middleware, MiddlewareContext } from '../router/types'
+import type { Middleware, MiddlewareContext } from '../../router/types'
 
 /**
  * 权限校验中间件工厂函数

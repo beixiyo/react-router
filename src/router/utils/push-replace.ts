@@ -164,7 +164,7 @@ export function createReplaceMethod(
  * @param options 导航选项
  * @example
  * ```ts
- * import { push } from '@/router'
+ * import { push } from './router'
  *
  * // 合并 query 参数
  * push({ query: { page: 2 } })
@@ -195,7 +195,7 @@ export function push(options?: PushReplaceOptions): void
  * @param options 导航选项
  * @example
  * ```ts
- * import { push } from '@/router'
+ * import { push } from './router'
  *
  * // 指定路径并合并 query
  * push('/users/123', { query: { page: 2 } })
@@ -229,7 +229,7 @@ export function push(
  * @param options 导航选项
  * @example
  * ```ts
- * import { replace } from '@/router'
+ * import { replace } from './router'
  *
  * // 合并 query 参数
  * replace({ query: { page: 2 } })
@@ -247,7 +247,7 @@ export function replace(options?: PushReplaceOptions): void
  * @param options 导航选项
  * @example
  * ```ts
- * import { replace } from '@/router'
+ * import { replace } from './router'
  *
  * // 指定路径并合并 query
  * replace('/users/123', { query: { page: 2 } })

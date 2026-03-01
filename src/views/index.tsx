@@ -4,7 +4,7 @@ import { useState } from 'react'
  *
  * 展示本地状态与输入框，用于验证 Activity 缓存的状态恢复。
  */
-import { Outlet } from '@/router'
+import { Outlet } from '../router'
 
 export default function Home() {
   const [text, setText] = useState('')

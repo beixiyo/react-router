@@ -1,4 +1,4 @@
-import type { MiddlewareContext } from '../router/types'
+import type { MiddlewareContext } from '../../router/types'
 import { describe, expect, it, vi } from 'vitest'
 import { createAuthMiddleware } from './index'
 

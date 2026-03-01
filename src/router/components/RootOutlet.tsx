@@ -1,5 +1,6 @@
+import type { ReactElement } from 'react'
 import type { LocationLike, RouteObject, RouterOptions } from '../types'
-import { Activity, useMemo } from 'react'
+import { Activity, createElement, useMemo } from 'react'
 import { LocationCtx } from '../context'
 import { getCachedElement, updateCache, useCacheConfig, useCacheMap } from '../renderer/cache'
 import { createRouteElement, emptyElement } from '../renderer/route-matcher'
@@ -20,10 +21,12 @@ export function RootOutlet({
   const { cacheKey, effectiveLimit, eligible } = useCacheConfig(options, location)
   const cache = useCacheMap(effectiveLimit)
 
-  // 在 useMemo 中检查缓存，如果缓存命中，直接返回缓存中的元素
-  // 这确保相同路径时，React 会复用相同的元素引用，保持缓存状态
+  /**
+   * 在 useMemo 中检查缓存，如果缓存命中，直接返回缓存中的元素
+   * 这确保相同路径时，React 会复用相同的元素引用，保持缓存状态
+   */
   const currentElement = useMemo(() => {
-    // 如果缓存启用且缓存命中，直接返回缓存中的元素
+    /** 如果缓存启用且缓存命中，直接返回缓存中的元素 */
     if (eligible && effectiveLimit !== undefined) {
       const cached = getCachedElement(cache, cacheKey, location)
       if (cached) {
@@ -31,21 +34,29 @@ export function RootOutlet({
       }
     }
 
-    // 缓存未命中，计算新元素
+    /** 缓存未命中，计算新元素 */
     const match = matchRoutes(routes, location.pathname, options.routeConfig)
-    if (!match)
-      return emptyElement('Not Found')
+    let element: ReactElement
 
-    // createRouteElement 会自动处理嵌套路由，递归渲染整个路由链
-    const element = createRouteElement(match.route, match, options)
+    if (!match) {
+      const NotFound = options.notFoundComponent
+      element = NotFound
+        ? (typeof NotFound === 'function'
+            ? createElement(NotFound)
+            : NotFound)
+        : emptyElement('Not Found')
+    }
+    else {
+      element = createRouteElement(match.route, match, options)
+    }
 
-    // 如果缓存启用，将新元素存入缓存
+    /** 如果缓存启用，将新元素存入缓存（包括 NotFound） */
     if (eligible && effectiveLimit !== undefined) {
       updateCache(cache, cacheKey, element, location, effectiveLimit)
     }
 
     return element
-  }, [routes, location.pathname, location.search, location.hash, location.hash, options.routeConfig, cacheKey, eligible, effectiveLimit, cache])
+  }, [routes, location.pathname, location.search, location.hash, options.routeConfig, options.notFoundComponent, cacheKey, eligible, effectiveLimit, cache])
 
   return (
     <>

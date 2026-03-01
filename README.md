@@ -111,6 +111,7 @@ const router = createBrowserRouter({
     cacheKey?: (location: LocationLike) => string,
     routeConfig?: RouteConfig,
     loadingComponent?: ReactElement | ComponentType,
+    notFoundComponent?: ReactElement | ComponentType,   // 404 未匹配时渲染
     beforeEach?: NavigationGuard,
     beforeResolve?: NavigationGuard,
     afterEach?: AfterEachGuard,
@@ -125,6 +126,21 @@ const router = createBrowserRouter({
 - `meta`: 自定义信息（如 `title`, `requiresAuth`）
 - `loadingComponent`: 懒加载时的加载组件，支持 ReactElement 或 ComponentType，优先级高于全局配置
 - `middlewares`: `Middleware[]`，Koa 风格 `(ctx, next)`，可调用 `ctx.redirect('/login')`
+
+### 404 配置
+
+当路由未匹配时，默认渲染简单的 "Not Found" 文案。可通过 `options.notFoundComponent` 自定义 404 页面：
+
+```tsx
+const router = createBrowserRouter({
+  routes: [...],
+  options: {
+    notFoundComponent: () => <div className="text-center py-20">页面不存在</div>,
+    // 或使用组件引用
+    // notFoundComponent: NotFoundPage,
+  },
+})
+```
 
 ## 🧭 Router 实例 API
 
@@ -209,6 +225,35 @@ type Middleware = (ctx: MiddlewareContext, next: () => Promise<void>) => void | 
 - Koa 风格路由中间件 + 文件式路由友好
 - 内置 LRU 页面缓存与 `include/exclude` 配置
 - Router 实例即全局 API，便于在 service/store 中复用
+
+## 📁 项目结构
+
+**`src/router/`** 才是路由库的**源码**，会被打包发布为 `@jl-org/react-router`。其余目录均为本仓库的**测试与示例**：
+
+```
+src
+├── router/                    # 路由库源码
+│   ├── components/            # Outlet、Link、RootOutlet 等
+│   ├── constants/
+│   ├── context/
+│   ├── hooks/                 # useRouter、useNavigate、useParams 等
+│   ├── renderer/              # 路由匹配、缓存、加载
+│   ├── types/
+│   ├── utils/                 # 守卫、中间件、LRU 缓存、路径解析
+│   ├── create-browser-router.ts
+│   ├── create-hash-router.ts
+│   └── ...
+├── routes/                    # 测试：路由配置与文件式路由示例
+│   ├── middlewares/           # 测试：业务中间件示例（requireLogin 等）
+│   ├── routes/
+│   ├── file-routes.tsx
+│   └── index.tsx
+├── store/                     # 测试：Demo 用状态（auth）
+├── utils/                     # 测试：Demo 用工具
+├── views/                     # 测试：Demo 页面组件
+├── App.tsx                    # 测试：Demo 应用入口
+└── main.tsx
+```
 
 ## 🔗 相关
 

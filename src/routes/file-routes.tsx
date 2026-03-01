@@ -1,10 +1,10 @@
-import type { RouteObject } from '@/router'
+import type { RouteObject } from '../router'
 /**
  * 从文件系统自动生成的路由配置
  */
 import { genRoutes } from '@jl-org/vite-auto-route'
 import { lazy } from 'react'
-import { createAuthMiddleware } from '../middlewares'
+import { createAuthMiddleware } from './middlewares'
 import { getUser } from '../store/auth'
 import Home from '../views'
 

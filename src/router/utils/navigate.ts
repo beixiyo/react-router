@@ -90,7 +90,7 @@ export function performNavigate(
  *
  * @example
  * ```ts
- * import { navigate } from '@/router'
+ * import { navigate } from './router'
  *
  * // 普通导航
  * navigate('/dashboard')
@@ -130,7 +130,7 @@ export function navigate(to: string | number, options?: NavigateOptions) {
  *
  * @example
  * ```ts
- * import { replace } from '@/router'
+ * import { replace } from './router'
  *
  * replace('/login')
  * replace('/users/:id', { params: { id: '123' } })
@@ -145,7 +145,7 @@ export function replace(to: string | number, options?: Omit<NavigateOptions, 're
  *
  * @example
  * ```ts
- * import { back } from '@/router'
+ * import { back } from './router'
  *
  * back()
  * ```

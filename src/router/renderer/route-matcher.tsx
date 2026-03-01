@@ -1,5 +1,6 @@
 import type { ComponentType, ReactElement } from 'react'
 import type { MatchResult, RouteObject, RouterOptions } from '../types'
+import { Link } from '../components/Link'
 import { OutletContext, ParamsContext } from '../context'
 import { renderRouteComponent } from './route-loader'
 
@@ -102,6 +103,56 @@ export function createRouteElement(route: RouteObject, match?: MatchResult, opti
 /**
  * 创建空元素（用于 404 等场景）
  */
-export function emptyElement(text: string): ReactElement {
-  return <div>{ text }</div>
+export function emptyElement(text = 'Not Found'): ReactElement {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '60vh',
+        padding: '2rem',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }}
+    >
+      <div
+        style={{
+          fontSize: '6rem',
+          fontWeight: 700,
+          lineHeight: 1,
+          color: '#1a1a1a',
+          letterSpacing: '-0.02em',
+        }}
+      >
+        { text }
+      </div>
+      <p
+        style={{
+          marginTop: '1rem',
+          fontSize: '1.125rem',
+          color: '#666',
+        }}
+      >
+        Page not found
+      </p>
+      <Link
+        to="/"
+        style={{
+          marginTop: '1.5rem',
+          padding: '0.5rem 1.25rem',
+          fontSize: '0.9375rem',
+          fontWeight: 500,
+          color: '#fff',
+          backgroundColor: '#1a1a1a',
+          border: 'none',
+          borderRadius: '0.5rem',
+          cursor: 'pointer',
+          textDecoration: 'none',
+        }}
+      >
+        Back to home
+      </Link>
+    </div>
+  )
 }

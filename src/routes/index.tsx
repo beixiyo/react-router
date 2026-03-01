@@ -1,6 +1,6 @@
-import type { GuardNext, NavigationGuardContext } from '@/router'
-import { createHashRouter } from '@/router'
-import { getUser } from '@/store/auth'
+import type { GuardNext, NavigationGuardContext } from '../router'
+import { createHashRouter } from '../router'
+import { getUser } from '../store/auth'
 import { fileRoutes } from './file-routes'
 
 export const router = createHashRouter({

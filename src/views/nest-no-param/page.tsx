@@ -1,5 +1,5 @@
-import { Link, Outlet } from '@/router'
-import { randomColor } from '@/utils'
+import { Link, Outlet } from '../../router'
+import { randomColor } from '../../utils'
 
 export default function NestedParamsPage() {
   return (

@@ -124,6 +124,8 @@ export interface RouterOptions {
   afterEach?: AfterEachGuard
   /** 全局懒加载时的加载组件 */
   loadingComponent?: ReactElement | ComponentType<any>
+  /** 404 未匹配路由时渲染的组件，支持 ReactElement 或 ComponentType */
+  notFoundComponent?: ReactElement | ComponentType<any>
 }
 
 /**

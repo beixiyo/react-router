@@ -1,5 +1,5 @@
 import type { RouteObject } from '../../router/types'
-import { createAuthMiddleware } from '../../middlewares'
+import { createAuthMiddleware } from '../middlewares'
 import { getUser } from '../../store/auth'
 import Profile from '../../views/profile/page'
 

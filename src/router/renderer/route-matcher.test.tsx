@@ -8,7 +8,7 @@ import { createRouteElement, emptyElement, renderRouteChain } from './route-matc
 describe('emptyElement', () => {
   it('应该创建空元素', () => {
     const { container } = render(emptyElement('Not Found'))
-    expect(container.textContent).toBe('Not Found')
+    expect(container.textContent).toContain('Not Found')
   })
 })
 

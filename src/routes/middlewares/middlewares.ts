@@ -1,5 +1,5 @@
 import { createAuthMiddleware } from '.'
-import { getUser } from '../store/auth'
+import { getUser } from '../../store/auth'
 
 /**
  * 需要登录的中间件

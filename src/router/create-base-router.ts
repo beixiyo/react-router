@@ -107,7 +107,7 @@ export function createBaseRouter<T extends BaseRouterInstance>(
 
   let currentLocation = getLocation()
 
-  // 如果有初始化逻辑，执行它
+  /** 如果有初始化逻辑，执行它 */
   if (urlAdapter.initialize) {
     currentLocation = urlAdapter.initialize(base, getLocation)
   }
@@ -259,10 +259,10 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     beforeResolve: guard => guardManager.beforeResolve(guard),
     afterEach: guard => guardManager.afterEach(guard),
     replace: () => {
-      // 占位符，将在创建 router 实例后替换
+      /** 占位符，将在创建 router 实例后替换 */
     },
     push: () => {
-      // 占位符，将在创建 router 实例后替换
+      /** 占位符，将在创建 router 实例后替换 */
     },
   }
 
@@ -287,7 +287,7 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     },
   })
 
-  // 在创建 router 实例后，绑定 push 和 replace 方法
+  /** 在创建 router 实例后，绑定 push 和 replace 方法 */
   router.push = createPushMethod(router, router)
   router.replace = createReplaceMethod(router, router)
 
