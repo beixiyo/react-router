@@ -4,8 +4,20 @@ import { createElement, useMemo } from 'react'
 import { LocationCtx } from '../context'
 import { getCachedElement, updateCache, useCacheConfig, useCacheMap } from '../renderer/cache'
 import { createRouteElement, emptyElement } from '../renderer/route-matcher'
-import { matchRoutes } from '../utils'
+import { matchLayout, matchRoutes } from '../utils'
 import { KeepAlive, KeepAliveProvider } from './KeepAlive'
+
+function wrapWithLayout(element: ReactElement, options: RouterOptions, pathname: string): ReactElement {
+  const layouts = options.layouts
+  if (!layouts?.length)
+    return element
+
+  const layout = layouts.find(l => matchLayout(pathname, l))
+  if (!layout)
+    return element
+
+  return createElement(layout.component, null, element)
+}
 
 /**
  * 根节点 Outlet：渲染整个路由树
@@ -51,13 +63,15 @@ export function RootOutlet({
       element = createRouteElement(match.route, match, options)
     }
 
+    element = wrapWithLayout(element, options, location.pathname)
+
     /** 如果缓存启用，将新元素存入缓存（包括 NotFound） */
     if (eligible && effectiveLimit !== undefined) {
       updateCache(cache, cacheKey, element, location, effectiveLimit)
     }
 
     return element
-  }, [routes, location.pathname, location.search, location.hash, options.routeConfig, options.notFoundComponent, cacheKey, eligible, effectiveLimit, cache])
+  }, [routes, location.pathname, location.search, location.hash, options.routeConfig, options.notFoundComponent, options.layouts, cacheKey, eligible, effectiveLimit, cache])
 
   return (
     <KeepAliveProvider>

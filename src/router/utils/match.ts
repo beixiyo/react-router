@@ -1,5 +1,5 @@
 import type { MatchOptions, PathToRegexpOptions } from 'path-to-regexp'
-import type { MatchResult, RouteConfig, RouteObject } from '../types'
+import type { LayoutConfig, MatchResult, RouteConfig, RouteObject } from '../types'
 import { match as p2rMatch } from 'path-to-regexp'
 import { DEFAULT_ROUTE_CONFIG } from '../constants'
 
@@ -279,4 +279,17 @@ export function matchPattern(pathname: string, pattern: string | RegExp): boolea
     return pathname === pattern
   }
   return pattern.test(pathname)
+}
+
+/**
+ * 判断 pathname 是否命中布局配置
+ * exclude 优先；include 为空则视为匹配全部
+ */
+export function matchLayout(pathname: string, layout: LayoutConfig): boolean {
+  if (layout.exclude?.some(p => matchPattern(pathname, p)))
+    return false
+  if (!layout.include?.length)
+    return true
+
+  return layout.include.some(p => matchPattern(pathname, p))
 }

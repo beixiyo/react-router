@@ -1,6 +1,5 @@
 import type { RouterOptions } from '../types'
 import { DEFAULT_CACHE_LIMIT } from '../constants'
-import { ERROR_CACHE_INCLUDE_EXCLUDE_MUTUAL } from '../constants/messages'
 import { shouldCache } from './cache'
 
 /**
@@ -35,13 +34,11 @@ export function shouldEnableCache(options: RouterOptions): boolean {
     return true
 
   if (typeof options.cache === 'object') {
-    // 如果提供了 include 或 exclude，启用缓存（由 shouldCache 判断具体路径）
+    // 缓存必须显式指定 include（至少一个），空数组或未指定不启用
     const include = options.cache.include
-    const exclude = options.cache.exclude
-    if ((include && include.length > 0) || (exclude && exclude.length > 0)) {
+    if (include && include.length > 0) {
       return true
     }
-    // 如果都没有提供，默认不缓存
     return false
   }
   // 默认不缓存
@@ -64,11 +61,6 @@ export function getCacheConfig(options: RouterOptions): CacheConfig {
   const exclude = typeof options.cache === 'object'
     ? options.cache.exclude
     : undefined
-
-  // 验证 include 和 exclude 互斥
-  if (include && include.length > 0 && exclude && exclude.length > 0) {
-    throw new Error(ERROR_CACHE_INCLUDE_EXCLUDE_MUTUAL)
-  }
 
   return {
     limit,
@@ -103,11 +95,9 @@ export function shouldCacheForPath(pathname: string, options: RouterOptions): bo
   // 如果 cache 是 object，根据 include/exclude 判断
   if (typeof options.cache === 'object') {
     const { include, exclude } = getCacheConfig(options)
-    // 如果提供了 include 或 exclude，使用 shouldCache 判断
-    if ((include && include.length > 0) || (exclude && exclude.length > 0)) {
+    if (include && include.length > 0) {
       return shouldCache(pathname, include, exclude)
     }
-    // 如果都没有提供，不缓存
     return false
   }
 

@@ -1,7 +1,7 @@
 /**
  * 路由与中间件类型定义
  */
-import type { ComponentType, LazyExoticComponent, ReactElement } from 'react'
+import type { ComponentType, LazyExoticComponent, ReactElement, ReactNode } from 'react'
 import type { NavigateOptions } from '../hooks/types'
 
 /**
@@ -98,18 +98,31 @@ export type Middleware = (
 ) => Promise<void>
 
 /**
+ * 布局配置：按路径 include/exclude 决定是否使用该布局包裹内容
+ * include 为空时视为匹配所有路径；exclude 优先级高于 include
+ */
+export interface LayoutConfig {
+  /** 路径匹配：命中任一则尝试使用此布局；空则匹配全部 */
+  include?: (string | RegExp)[]
+  /** 路径排除：命中任一则跳过此布局 */
+  exclude?: (string | RegExp)[]
+  /** 布局组件，接收 children 渲染子内容 */
+  component: ComponentType<{ children: ReactNode }>
+}
+
+/**
  * 路由器选项
  */
 export interface RouterOptions {
   /** 基础路径前缀 */
   base?: string
-  /** 页面缓存配置 */
+  /** 页面缓存配置；必须显式指定 include 才缓存，未指定或空数组不缓存 */
   cache?: boolean | {
     /** 缓存数量限制 @default 10 */
     limit?: number
-    /** 缓存包含的路径 */
+    /** 缓存包含的路径（必填，指定才启用路径缓存）；exclude 可共存，命中 exclude 则不缓存 */
     include?: (string | RegExp)[]
-    /** 缓存排除的路径 */
+    /** 缓存排除的路径；命中则不缓存 */
     exclude?: (string | RegExp)[]
   }
   /** 自定义缓存键生成函数 */
@@ -126,6 +139,8 @@ export interface RouterOptions {
   loadingComponent?: ReactElement | ComponentType<any>
   /** 404 未匹配路由时渲染的组件，支持 ReactElement 或 ComponentType */
   notFoundComponent?: ReactElement | ComponentType<any>
+  /** 布局列表：按 pathname 匹配，第一个命中的布局包裹渲染结果 */
+  layouts?: LayoutConfig[]
 }
 
 /**

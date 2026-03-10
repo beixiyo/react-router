@@ -3,12 +3,14 @@ import { matchPattern } from './match'
 /**
  * 判断路径是否应该被缓存
  *
- * 注意：include 和 exclude 的互斥验证应该在调用此函数之前完成（通过 getCacheConfig）
- * 此函数只负责路径匹配逻辑，不进行互斥验证
+ * 缓存与布局不同，必须显式指定 include 才缓存，未指定或空数组不缓存：
+ * - include 必须有至少一个模式，否则不缓存
+ * - exclude 优先：命中 exclude 则不缓存
+ * - 需命中 include 才缓存
  *
  * @param pathname 路径名
- * @param include 包含模式列表（如果提供，只有匹配的路径才会被缓存）
- * @param exclude 排除模式列表（如果提供，匹配的路径不会被缓存）
+ * @param include 包含模式列表（必填，指定才缓存）
+ * @param exclude 排除模式列表（可选，命中则不缓存）
  * @returns 是否应该缓存
  */
 export function shouldCache(
@@ -16,16 +18,9 @@ export function shouldCache(
   include?: (string | RegExp)[] | undefined,
   exclude?: (string | RegExp)[] | undefined,
 ): boolean {
-  // 如果只有 exclude，匹配的不缓存，不匹配的缓存
-  if (exclude && exclude.length > 0) {
-    return !exclude.some(p => matchPattern(pathname, p))
-  }
-
-  // 如果只有 include，只有匹配的才缓存
-  if (include && include.length > 0) {
-    return include.some(p => matchPattern(pathname, p))
-  }
-
-  // 默认不缓存（两者都不存在）
-  return false
+  if (!include?.length)
+    return false
+  if (exclude?.some(p => matchPattern(pathname, p)))
+    return false
+  return include.some(p => matchPattern(pathname, p))
 }

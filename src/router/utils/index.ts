@@ -7,7 +7,7 @@
 export { shouldCache } from './cache'
 
 // 路由匹配相关
-export { matchPath, matchPattern, matchRoutes } from './match'
+export { matchLayout, matchPath, matchPattern, matchRoutes } from './match'
 
 // 中间件组合
 export { compose } from './middleware'

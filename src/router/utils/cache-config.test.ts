@@ -1,6 +1,5 @@
 import type { RouterOptions } from '../types'
 import { describe, expect, it } from 'vitest'
-import { ERROR_CACHE_INCLUDE_EXCLUDE_MUTUAL } from '../constants/messages'
 import { getCacheConfig, shouldCacheForPath, shouldEnableCache } from './cache-config'
 
 describe('shouldEnableCache', () => {
@@ -23,13 +22,13 @@ describe('shouldEnableCache', () => {
     expect(shouldEnableCache(options)).toBe(true)
   })
 
-  it('应该在 cache: object with exclude 时启用缓存', () => {
+  it('应该在 cache: object 仅 exclude 时禁用缓存（必须显式指定 include）', () => {
     const options: RouterOptions = {
       cache: {
         exclude: ['/admin'],
       },
     }
-    expect(shouldEnableCache(options)).toBe(true)
+    expect(shouldEnableCache(options)).toBe(false)
   })
 
   it('应该在 cache: object without include/exclude 时禁用缓存', () => {
@@ -75,17 +74,20 @@ describe('getCacheConfig', () => {
     expect(config.limit).toBe(10) // DEFAULT_CACHE_LIMIT
   })
 
-  it('应该抛出错误当 include 和 exclude 同时存在', () => {
+  it('应该支持 include 和 exclude 同时存在', () => {
     const options: RouterOptions = {
       cache: {
-        include: ['/dashboard'],
+        include: ['/dashboard', '/users'],
         exclude: ['/admin'],
       },
     }
+    const config = getCacheConfig(options)
 
-    expect(() => {
-      getCacheConfig(options)
-    }).toThrow(ERROR_CACHE_INCLUDE_EXCLUDE_MUTUAL)
+    expect(config).toEqual({
+      limit: 10,
+      include: ['/dashboard', '/users'],
+      exclude: ['/admin'],
+    })
   })
 
   it('应该处理 cache: true 的情况', () => {
@@ -125,9 +127,10 @@ describe('shouldCacheForPath', () => {
     expect(shouldCacheForPath('/posts', options)).toBe(false)
   })
 
-  it('应该根据 exclude 模式判断', () => {
+  it('应该根据 include + exclude 判断（exclude 优先）', () => {
     const options: RouterOptions = {
       cache: {
+        include: ['/dashboard', '/admin'],
         exclude: ['/admin'],
       },
     }
@@ -149,11 +152,13 @@ describe('shouldCacheForPath', () => {
   it('应该支持正则表达式 exclude', () => {
     const options: RouterOptions = {
       cache: {
+        include: [/\/dashboard/, /\/admin\/.*/],
         exclude: [/\/admin/],
       },
     }
     expect(shouldCacheForPath('/dashboard', options)).toBe(true)
     expect(shouldCacheForPath('/admin/users', options)).toBe(false)
+    expect(shouldCacheForPath('/admin', options)).toBe(false)
   })
 
   it('应该在 cache: object without include/exclude 时返回 false', () => {
@@ -163,5 +168,25 @@ describe('shouldCacheForPath', () => {
       },
     }
     expect(shouldCacheForPath('/dashboard', options)).toBe(false)
+  })
+
+  it('应该在 include 与 exclude 共存时：exclude 优先', () => {
+    const options: RouterOptions = {
+      cache: {
+        include: ['/dashboard', '/users'],
+        exclude: ['/admin', '/users/admin'],
+      },
+    }
+    expect(shouldCacheForPath('/dashboard', options)).toBe(true)
+    expect(shouldCacheForPath('/users', options)).toBe(true)
+    expect(shouldCacheForPath('/admin', options)).toBe(false)
+    expect(shouldCacheForPath('/users/admin', options)).toBe(false)
+    expect(shouldCacheForPath('/posts', options)).toBe(false)
+  })
+
+  it('应该在 include 为空或未指定时不缓存', () => {
+    expect(shouldCacheForPath('/dashboard', { cache: {} })).toBe(false)
+    expect(shouldCacheForPath('/dashboard', { cache: { include: [] } })).toBe(false)
+    expect(shouldCacheForPath('/dashboard', { cache: { exclude: ['/admin'] } })).toBe(false)
   })
 })

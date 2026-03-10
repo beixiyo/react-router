@@ -1,6 +1,5 @@
 import type { Middleware, RouteObject } from '../types'
 import { describe, expect, it } from 'vitest'
-import { ERROR_CACHE_INCLUDE_EXCLUDE_MUTUAL } from '../constants/messages'
 import { getCacheConfig } from './cache-config'
 import { collectMiddlewares, matchPath, matchRoutes, parseHash, parseQuery, shouldCache } from './index'
 
@@ -411,9 +410,10 @@ describe('shouldCache', () => {
     expect(shouldCache('/posts', ['/dashboard', '/users'])).toBe(false)
   })
 
-  it('应该根据 exclude 模式判断', () => {
-    expect(shouldCache('/dashboard', undefined, ['/admin'])).toBe(true)
-    expect(shouldCache('/admin', undefined, ['/admin'])).toBe(false)
+  it('应该根据 exclude 模式判断（需配合 include）', () => {
+    const include = ['/dashboard', '/admin']
+    expect(shouldCache('/dashboard', include, ['/admin'])).toBe(true)
+    expect(shouldCache('/admin', include, ['/admin'])).toBe(false)
   })
 
   it('应该支持正则表达式', () => {
@@ -421,20 +421,32 @@ describe('shouldCache', () => {
     expect(shouldCache('/users/abc', [/\/(users|posts)\/\d+/])).toBe(false)
   })
 
-  it('应该在没有 include 和 exclude 时返回 false', () => {
+  it('应该在 include 未指定或空时返回 false', () => {
     expect(shouldCache('/dashboard')).toBe(false)
+    expect(shouldCache('/dashboard', [])).toBe(false)
+    expect(shouldCache('/dashboard', undefined, ['/admin'])).toBe(false)
+  })
+
+  it('应该在 include 与 exclude 共存时：exclude 优先', () => {
+    const include = ['/dashboard', '/users']
+    const exclude = ['/admin', '/users/admin']
+    expect(shouldCache('/dashboard', include, exclude)).toBe(true)
+    expect(shouldCache('/users', include, exclude)).toBe(true)
+    expect(shouldCache('/admin', include, exclude)).toBe(false)
+    expect(shouldCache('/users/admin', include, exclude)).toBe(false)
+    expect(shouldCache('/posts', include, exclude)).toBe(false)
   })
 })
 
 describe('getCacheConfig', () => {
-  it('应该抛出错误当 include 和 exclude 同时存在', () => {
-    expect(() => {
-      getCacheConfig({
-        cache: {
-          include: ['/dashboard'],
-          exclude: ['/admin'],
-        },
-      })
-    }).toThrow(ERROR_CACHE_INCLUDE_EXCLUDE_MUTUAL)
+  it('应该支持 include 和 exclude 同时存在', () => {
+    const config = getCacheConfig({
+      cache: {
+        include: ['/dashboard'],
+        exclude: ['/admin'],
+      },
+    })
+    expect(config.include).toEqual(['/dashboard'])
+    expect(config.exclude).toEqual(['/admin'])
   })
 })
