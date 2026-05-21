@@ -116,13 +116,13 @@ export interface LayoutConfig {
 export interface RouterOptions {
   /** 基础路径前缀 */
   base?: string
-  /** 页面缓存配置；必须显式指定 include 才缓存，未指定或空数组不缓存 */
+  /** 页面缓存配置；传 object 即启用缓存机制 */
   cache?: boolean | {
     /** 缓存数量限制 @default 10 */
     limit?: number
-    /** 缓存包含的路径（必填，指定才启用路径缓存）；exclude 可共存，命中 exclude 则不缓存 */
+    /** 缓存包含的路径；不传则缓存所有路径，传空数组则不缓存 */
     include?: (string | RegExp)[]
-    /** 缓存排除的路径；命中则不缓存 */
+    /** 缓存排除的路径；优先于 include，命中则不缓存 */
     exclude?: (string | RegExp)[]
   }
   /** 自定义缓存键生成函数 */

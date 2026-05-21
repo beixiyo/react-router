@@ -421,10 +421,14 @@ describe('shouldCache', () => {
     expect(shouldCache('/users/abc', [/\/(users|posts)\/\d+/])).toBe(false)
   })
 
-  it('应该在 include 未指定或空时返回 false', () => {
-    expect(shouldCache('/dashboard')).toBe(false)
+  it('include 未传时缓存所有路径（除 exclude 外）', () => {
+    expect(shouldCache('/dashboard')).toBe(true)
+    expect(shouldCache('/dashboard', undefined, ['/admin'])).toBe(true)
+    expect(shouldCache('/admin', undefined, ['/admin'])).toBe(false)
+  })
+
+  it('include 为空数组时不缓存任何路径', () => {
     expect(shouldCache('/dashboard', [])).toBe(false)
-    expect(shouldCache('/dashboard', undefined, ['/admin'])).toBe(false)
   })
 
   it('应该在 include 与 exclude 共存时：exclude 优先', () => {

@@ -53,7 +53,7 @@ const router = createBrowserRouter({
     },
   ],
   options: {
-    cache: { limit: 5, include: ['/', '/dashboard'] },
+    cache: { limit: 5, exclude: ['/login'] },
     beforeEach: async (to, _from, next) => next(),
     afterEach: (to) => { document.title = to.meta?.title ?? 'App' },
   },
@@ -77,8 +77,8 @@ createBrowserRouter({
     base?: string,
     cache?: boolean | {
       limit?: number,                    // @default 10
-      include?: (string | RegExp)[],      // 必填，指定才缓存
-      exclude?: (string | RegExp)[],     // 可选，命中则不缓存
+      include?: (string | RegExp)[],     // 不传则缓存所有路径，传空数组则不缓存
+      exclude?: (string | RegExp)[],     // 优先于 include，命中则不缓存
     },
     cacheKey?: (loc: LocationLike) => string,
     loadingComponent?: ReactElement | ComponentType,

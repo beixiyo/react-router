@@ -22,22 +22,22 @@ describe('shouldEnableCache', () => {
     expect(shouldEnableCache(options)).toBe(true)
   })
 
-  it('应该在 cache: object 仅 exclude 时禁用缓存（必须显式指定 include）', () => {
+  it('应该在 cache: object 仅 exclude 时启用缓存', () => {
     const options: RouterOptions = {
       cache: {
         exclude: ['/admin'],
       },
     }
-    expect(shouldEnableCache(options)).toBe(false)
+    expect(shouldEnableCache(options)).toBe(true)
   })
 
-  it('应该在 cache: object without include/exclude 时禁用缓存', () => {
+  it('应该在 cache: object 仅 limit 时启用缓存', () => {
     const options: RouterOptions = {
       cache: {
         limit: 10,
       },
     }
-    expect(shouldEnableCache(options)).toBe(false)
+    expect(shouldEnableCache(options)).toBe(true)
   })
 
   it('应该在 cache 未定义时禁用缓存', () => {
@@ -161,13 +161,14 @@ describe('shouldCacheForPath', () => {
     expect(shouldCacheForPath('/admin', options)).toBe(false)
   })
 
-  it('应该在 cache: object without include/exclude 时返回 false', () => {
+  it('应该在 cache: object 仅 limit 时缓存所有路径', () => {
     const options: RouterOptions = {
       cache: {
         limit: 10,
       },
     }
-    expect(shouldCacheForPath('/dashboard', options)).toBe(false)
+    expect(shouldCacheForPath('/dashboard', options)).toBe(true)
+    expect(shouldCacheForPath('/users', options)).toBe(true)
   })
 
   it('应该在 include 与 exclude 共存时：exclude 优先', () => {
@@ -184,9 +185,13 @@ describe('shouldCacheForPath', () => {
     expect(shouldCacheForPath('/posts', options)).toBe(false)
   })
 
-  it('应该在 include 为空或未指定时不缓存', () => {
-    expect(shouldCacheForPath('/dashboard', { cache: {} })).toBe(false)
+  it('include 未传时缓存所有路径（除 exclude 外）', () => {
+    expect(shouldCacheForPath('/dashboard', { cache: {} })).toBe(true)
+    expect(shouldCacheForPath('/dashboard', { cache: { exclude: ['/admin'] } })).toBe(true)
+    expect(shouldCacheForPath('/admin', { cache: { exclude: ['/admin'] } })).toBe(false)
+  })
+
+  it('include 为空数组时不缓存任何路径', () => {
     expect(shouldCacheForPath('/dashboard', { cache: { include: [] } })).toBe(false)
-    expect(shouldCacheForPath('/dashboard', { cache: { exclude: ['/admin'] } })).toBe(false)
   })
 })
