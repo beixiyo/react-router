@@ -1,7 +1,8 @@
 import type { ReactElement } from 'react'
 import type { LocationLike, RouteObject, RouterOptions } from '../types'
-import { createElement, useMemo } from 'react'
-import { LocationCtx } from '../context'
+import { createElement, useContext, useEffect, useMemo, useReducer } from 'react'
+import { LocationCtx, RouterCtx } from '../context'
+import { isCacheKeyMatched } from '../renderer/cache-control'
 import { getCachedElement, updateCache, useCacheConfig, useCacheMap } from '../renderer/cache'
 import { createRouteElement, emptyElement } from '../renderer/route-matcher'
 import { matchLayout, matchRoutes } from '../utils'
@@ -33,6 +34,27 @@ export function RootOutlet({
 }) {
   const { cacheKey, effectiveLimit, eligible } = useCacheConfig(options, location)
   const cache = useCacheMap(effectiveLimit)
+  const router = useContext(RouterCtx)
+  const [, forceRender] = useReducer(n => n + 1, 0)
+
+  useEffect(() => {
+    if (!router)
+      return
+
+    return router.subscribeCache((event) => {
+      if (event.type === 'clear') {
+        cache.clear()
+      }
+      else {
+        for (const key of [...cache.keys()]) {
+          if (isCacheKeyMatched(key, event.matcher))
+            cache.delete(key)
+        }
+      }
+
+      forceRender()
+    })
+  }, [cache, router])
 
   /**
    * 在 useMemo 中检查缓存，如果缓存命中，直接返回缓存中的元素

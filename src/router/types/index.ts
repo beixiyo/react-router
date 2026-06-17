@@ -3,6 +3,7 @@
  */
 import type { ComponentType, LazyExoticComponent, ReactElement, ReactNode } from 'react'
 import type { NavigateOptions } from '../hooks/types'
+import type { RouterCacheDeleteMatcher, RouterCacheListener } from '../renderer/cache-control'
 
 /**
  * 表示一个路由项的配置对象
@@ -226,6 +227,12 @@ export interface Router {
   beforeResolve: (guard: NavigationGuard) => RemoveGuard
   /** 注册全局后置守卫，返回移除函数 */
   afterEach: (guard: AfterEachGuard) => RemoveGuard
+  /** 清空所有 keep-alive 页面缓存 */
+  clearCache: () => void
+  /** 删除匹配指定 key 的 keep-alive 页面缓存 */
+  deleteCache: (matcher: RouterCacheDeleteMatcher) => void
+  /** 订阅 keep-alive 页面缓存控制事件，供 RouterProvider 内部使用 */
+  subscribeCache: (listener: RouterCacheListener) => RemoveGuard
 }
 
 /**

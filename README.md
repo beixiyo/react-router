@@ -91,6 +91,31 @@ createBrowserRouter({
 })
 ```
 
+### 页面缓存控制
+
+`cache` 开启后，命中的页面会以 keep-alive 形式保留组件状态。需要在退出登录、切换租户、切换账号等场景释放缓存时，可以直接调用 Router 实例方法：
+
+```ts
+// 清空所有 keep-alive 页面缓存
+router.clearCache()
+
+// 只删除某个缓存 key
+router.deleteCache('/cards')
+
+// 按正则或函数删除一组缓存 key
+router.deleteCache(/^\/cards/)
+router.deleteCache(key => key.includes(':guest'))
+```
+
+如果清缓存后会立刻跳转，推荐在目标路由进入后再清，避免当前可缓存页面在同一次 render 中重新写回缓存：
+
+```ts
+router.afterEach((ctx) => {
+  if (ctx.to.pathname === '/login')
+    router.clearCache()
+})
+```
+
 ### RouteObject 常用字段
 
 | 字段 | 说明 |
@@ -149,6 +174,8 @@ options: {
 | `router.back()` | `history.back()` |
 | `router.getLocation()` | 当前 `LocationLike` |
 | `router.beforeEach/beforeResolve/afterEach(handler)` | 守卫注册 |
+| `router.clearCache()` | 清空所有 keep-alive 页面缓存 |
+| `router.deleteCache(matcher)` | 删除匹配指定 key 的 keep-alive 页面缓存，支持 string / RegExp / function |
 | `router.subscribe(listener)` | 监听 location |
 | `router.dispose()` | 清理 |
 

@@ -10,6 +10,7 @@ import type {
   RouterOptions,
 } from './types'
 import { nanoid } from 'nanoid'
+import { createRouterCacheController } from './renderer/cache-control'
 import { collectMiddlewares, compose, matchRoutes, normalizePathStartSlash, parseHash, parseQuery, parseUrl } from './utils'
 import { GuardManager } from './utils/guard-manager'
 import { createPushMethod, createReplaceMethod } from './utils/push-replace'
@@ -76,6 +77,7 @@ export function createBaseRouter<T extends BaseRouterInstance>(
   const base = options.base ?? ''
   const urlAdapter = config.urlAdapter
   const guardManager = new GuardManager()
+  const cacheController = createRouterCacheController()
   const subscribers = new Set<(location: LocationLike) => void>()
   let disposed = false
 
@@ -258,6 +260,9 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     beforeEach: guard => guardManager.beforeEach(guard),
     beforeResolve: guard => guardManager.beforeResolve(guard),
     afterEach: guard => guardManager.afterEach(guard),
+    clearCache: cacheController.clearCache,
+    deleteCache: cacheController.deleteCache,
+    subscribeCache: cacheController.subscribeCache,
     replace: () => {
       /** 占位符，将在创建 router 实例后替换 */
     },
