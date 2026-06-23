@@ -200,11 +200,16 @@ describe('setGlobalRouter 和 getGlobalRouter', () => {
     const mockRouter: Router = {
       navigate: vi.fn(),
       replace: vi.fn(),
+      push: vi.fn(),
       back: vi.fn(),
       location: { pathname: '/', search: '', hash: '' },
       beforeEach: vi.fn(),
       beforeResolve: vi.fn(),
       afterEach: vi.fn(),
+      clearCache: vi.fn(),
+      deleteCache: vi.fn(),
+      subscribeCache: vi.fn(),
+      subscribe: vi.fn(),
     }
 
     setGlobalRouter(mockRouter)

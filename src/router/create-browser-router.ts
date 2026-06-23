@@ -52,7 +52,6 @@ export function createBrowserRouter(config: CreateBrowserRouterConfig): BrowserR
         options: params.options,
         base: params.base,
         getLocation: params.getLocation,
-        subscribe: params.subscribe,
         ...params.navigationAdapter,
         dispose: params.dispose,
       }

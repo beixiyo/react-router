@@ -131,7 +131,6 @@ export function createHashRouter(config: CreateHashRouterConfig): HashRouterInst
         options: params.options,
         base: params.base,
         getLocation: params.getLocation,
-        subscribe: params.subscribe,
         ...params.navigationAdapter,
         dispose: params.dispose,
       }

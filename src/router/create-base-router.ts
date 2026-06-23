@@ -263,6 +263,10 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     clearCache: cacheController.clearCache,
     deleteCache: cacheController.deleteCache,
     subscribeCache: cacheController.subscribeCache,
+    subscribe: (listener) => {
+      subscribers.add(listener)
+      return () => subscribers.delete(listener)
+    },
     replace: () => {
       /** 占位符，将在创建 router 实例后替换 */
     },
@@ -277,10 +281,7 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     options,
     base,
     getLocation: () => currentLocation,
-    subscribe: (listener) => {
-      subscribers.add(listener)
-      return () => subscribers.delete(listener)
-    },
+    subscribe: navigationAdapter.subscribe,
     navigationAdapter,
     dispose: () => {
       if (disposed)

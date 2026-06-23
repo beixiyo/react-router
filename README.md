@@ -12,16 +12,18 @@
 
 受 Vue Router 启发的 React 路由库。Vue Router 风格守卫、Koa 风格中间件、内置 LRU 缓存，Router 实例即全局 API
 
+[English](./README.en.md) | [更新日志](./CHANGELOG.md)
+
 [Code Demo](./src/App.tsx)
 
 ## ✨ 特性
 
-| 特性 | @jl-org/react-router | react-router | TanStack Router |
+| 特性 | @jl-org/react-router | React Router | TanStack Router |
 |------|----------------------|--------------|-----------------|
-| 全局守卫 `beforeEach`/`beforeResolve`/`afterEach` | ✅ Vue Router 风格 | ❌ 无，需根 middleware 模拟 | ⚠️ `route.beforeLoad` 路由级 |
-| Koa 风格中间件 | ✅ | ⚠️ v7 有 middleware | Loader 机制 |
-| 内置 LRU 页面缓存 | ✅ | ❌ 需第三方（如 keepalive-for-react） | ❌ |
-| 全局布局 `layouts` | ✅ pathname 配置 | ❌ 仅嵌套路由 | ❌ 仅 Layout Route |
+| 全局守卫 `beforeEach`/`beforeResolve`/`afterEach` | ✅ Vue Router 风格全局 API | ⚠️ 无同名 API，可用 route middleware / loader 生命周期承接 | ⚠️ `route.beforeLoad` 路由 / 子树级 |
+| Koa 风格中间件 | ✅ route `middlewares`，`(ctx, next)` | ✅ `middleware` / `clientMiddleware` | ⚠️ `beforeLoad` + loader 生命周期 |
+| 内置组件 keep-alive / LRU 页面缓存 | ✅ 组件实例级 LRU keep-alive | ❌ 无内置组件 keep-alive | ⚠️ 有 loader / SWR 数据缓存，非组件 keep-alive |
+| 全局布局 `layouts` | ✅ 集中配置 pathname 匹配规则 | ⚠️ 嵌套路由 / layout route | ⚠️ layout / pathless layout route |
 
 ## 📦 安装
 
@@ -188,7 +190,8 @@ options: {
 | `<Link />` / `<NavLink />` | 导航 |
 | `useRouter()` | 实例 |
 | `useNavigate()` | `navigate` 函数 |
-| `useLocation()` | `pathname`、`search`、`hash` |
+| `useLocation()` | 全局当前 `pathname`、`search`、`hash`，默认跟随真实路由切换 |
+| `useLocation({ scope: 'cache' })` | 当前 keep-alive 缓存 entry 的 `pathname`、`search`、`hash` |
 | `useParams()` | `{ params, query, hash }` |
 
 ## 🔌 守卫与中间件

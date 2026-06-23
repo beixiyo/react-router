@@ -9,11 +9,16 @@ describe('useRouter', () => {
     const mockRouter: Router = {
       navigate: vi.fn(),
       replace: vi.fn(),
+      push: vi.fn(),
       back: vi.fn(),
       location: { pathname: '/', search: '', hash: '' },
       beforeEach: vi.fn(),
       beforeResolve: vi.fn(),
       afterEach: vi.fn(),
+      clearCache: vi.fn(),
+      deleteCache: vi.fn(),
+      subscribeCache: vi.fn(),
+      subscribe: vi.fn(),
     }
 
     const { result } = renderHook(() => useRouter(), {

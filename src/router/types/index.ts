@@ -233,6 +233,8 @@ export interface Router {
   deleteCache: (matcher: RouterCacheDeleteMatcher) => void
   /** 订阅 keep-alive 页面缓存控制事件，供 RouterProvider 内部使用 */
   subscribeCache: (listener: RouterCacheListener) => RemoveGuard
+  /** 订阅全局位置变化，返回取消订阅函数 */
+  subscribe: (listener: (location: LocationLike) => void) => RemoveGuard
 }
 
 /**
