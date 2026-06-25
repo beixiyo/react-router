@@ -10,9 +10,17 @@ export interface CacheEntry {
   element: ReactElement
   lastShown: number
   location: LocationLike
+  /**
+   * 条目创建序号。clearCache / deleteCache 后被移除再重建的条目会拿到新序号，
+   * 上层据此变更 React key 让其原地重新挂载（状态重置），而非沿用旧实例
+   */
+  seq?: number
 }
 
 export type CacheMap = LRUCache<string, CacheEntry>
+
+/** 全局自增序号，仅用于区分「同 key 但已被清/删后重建」的缓存条目 */
+let entrySeq = 0
 
 /**
  * 计算缓存配置
@@ -59,9 +67,10 @@ export function useCacheMap(maxCacheLen?: number) {
   if (!cacheRef.current) {
     cacheRef.current = new LRUCache<string, CacheEntry>(maxCacheLen ?? DEFAULT_CACHE_LIMIT)
   }
-  // 如果 maxCacheLen 变化了，更新它
+  // 如果 maxCacheLen 变化了，更新它并立即裁剪到新上限
   if (cacheRef.current.maxCacheLen !== (maxCacheLen ?? DEFAULT_CACHE_LIMIT)) {
     cacheRef.current.maxCacheLen = maxCacheLen ?? DEFAULT_CACHE_LIMIT
+    cacheRef.current.trim()
   }
   return cacheRef.current
 }
@@ -79,20 +88,46 @@ export function updateCache(
   if (effectiveLimit === undefined)
     return
 
-  // 更新 maxCacheLen（如果变化了）
+  // 更新 maxCacheLen（如果变化了）并裁剪到新上限
   if (cache.maxCacheLen !== effectiveLimit) {
     cache.maxCacheLen = effectiveLimit
+    cache.trim()
   }
 
   // 如果不存在，添加新元素；LRUCache 会自动处理 LRU 逻辑
+  // 叶子页一旦缓存即冻结元素（保留状态），不刷新——参数已由 pathname 维度的 key 区分
   if (!cache.has(cacheKey)) {
     cache.set(cacheKey, {
       key: cacheKey,
       element,
       lastShown: Date.now(),
       location: { ...location },
+      seq: entrySeq++,
     })
   }
+}
+
+/**
+ * 写入 / 刷新「壳」缓存条目
+ *
+ * 与叶子缓存不同，壳（共享祖先 / 布局）每次都用最新元素覆盖，使其在保持单实例的同时，
+ * 参数 / splat 跟随当前导航刷新（修复被缓存壳参数过期问题）。
+ * 复用已有条目的 seq → React key 不变 → 实例与本地状态得以保留，仅更新参数上下文。
+ */
+export function setShellEntry(
+  shellCache: Map<string, CacheEntry>,
+  cacheKey: string,
+  element: ReactElement,
+  location: LocationLike,
+) {
+  const prev = shellCache.get(cacheKey)
+  shellCache.set(cacheKey, {
+    key: cacheKey,
+    element,
+    lastShown: Date.now(),
+    location: { ...location },
+    seq: prev?.seq ?? entrySeq++,
+  })
 }
 
 /**

@@ -69,35 +69,21 @@ export function createRouteElement(route: RouteObject, match?: MatchResult, opti
     return renderRouteChain(match.routeChain, 0, match, options)
   }
 
-  // 单个路由，直接渲染（支持懒加载）
+  // 单个路由：始终用 OutletContext 包裹当前路由
+  // 这样组件内部的 <Outlet /> 始终以「当前路由自己的 children」为候选：
+  // - 带 children（含直达父路由 bare path）→ 渲染匹配的子路由
+  // - 无 children（叶子，包括根路由 '/'）→ 候选为空、渲染空，
+  //   避免 <Outlet /> 误继承父级候选 → 反复匹配到同一叶子 → 无限递归（堆栈溢出 / 内存溢出）
   const params = match?.params ?? {}
   const loadingComponent = getLoadingComponent(route, options)
 
-  // 如果路由有 children，即使当前只匹配父路由，也需要用 OutletContext 包裹
-  // 这样父路由组件中的 <Outlet /> 会识别为嵌套节点，调用 NestedOutlet 而不是 RootOutlet
-  if (route.children && route.children.length > 0) {
-    return (
-      <OutletContext.Provider value={{ parentRoute: route, parentPath: route.path }}>
-        <ParamsContext.Provider value={params}>
-          { renderRouteComponent(route.component, params, loadingComponent, route.layoutComponent) }
-        </ParamsContext.Provider>
-      </OutletContext.Provider>
-    )
-  }
-
-  // 对于根路由（path: '/'），即使没有 children，也使用 OutletContext 包裹
-  // 这样可以防止根路由组件内部使用 <Outlet /> 时导致无限递归
-  if (route.path === '/') {
-    return (
-      <OutletContext.Provider value={{ parentRoute: route, parentPath: route.path }}>
-        <ParamsContext.Provider value={params}>
-          { renderRouteComponent(route.component, params, loadingComponent, route.layoutComponent) }
-        </ParamsContext.Provider>
-      </OutletContext.Provider>
-    )
-  }
-
-  return renderRouteComponent(route.component, params, loadingComponent, route.layoutComponent)
+  return (
+    <OutletContext.Provider value={{ parentRoute: route, parentPath: route.path }}>
+      <ParamsContext.Provider value={params}>
+        { renderRouteComponent(route.component, params, loadingComponent, route.layoutComponent) }
+      </ParamsContext.Provider>
+    </OutletContext.Provider>
+  )
 }
 
 /**

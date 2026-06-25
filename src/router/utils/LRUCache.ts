@@ -28,15 +28,24 @@ export class LRUCache<K, V> extends Map<K, V> {
     const res = super.set(key, value)
 
     /**
-     * 如果超出最大缓存长度，则删除最久未使用的（第一个）
+     * 超出最大缓存长度则淘汰最久未使用的（用循环而非单次 if，
+     * 兼容运行时调小 maxCacheLen 后一次性裁剪多余条目的场景）
      */
-    if (this.size > this.maxCacheLen) {
-      const k = this.keys().next()?.value
-      if (k) {
-        this.delete(k)
-      }
-    }
+    this.trim()
 
     return res
+  }
+
+  /**
+   * 将缓存裁剪到不超过 maxCacheLen，从最久未使用（最早插入）的一端淘汰
+   * 在运行时调小 maxCacheLen 后调用，可立即收敛到新上限，而非依赖后续 set 逐个挤出
+   */
+  trim(): void {
+    while (this.size > this.maxCacheLen) {
+      const first = this.keys().next()
+      if (first.done)
+        break
+      this.delete(first.value)
+    }
   }
 }
