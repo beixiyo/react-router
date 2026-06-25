@@ -42,6 +42,25 @@ function isShellMatch(match: MatchResult): boolean {
 }
 
 /**
+ * 用当前参数填充路由 path 模式，得到「本层已消费的具体路径前缀」
+ * 仅用于壳的 scope:'cache' 位置：让壳的缓存位置稳定代表自身层级（如 `/users/1`），
+ * 而非跟随最深叶子（`/users/1/profile`）来回跳
+ */
+function fillPath(pattern: string, params: Record<string, string | string[]>): string {
+  const filled = pattern
+    .replace(/:([A-Z0-9_]+)\??/gi, (_, name: string) => {
+      const value = params[name]
+      if (Array.isArray(value))
+        return value.join('/')
+      return value ?? ''
+    })
+    .replace(/\/{2,}/g, '/')
+    .replace(/\/+$/, '')
+
+  return filled || '/'
+}
+
+/**
  * 计算「本层」的 keep-alive 缓存键
  *
  * - 叶子层：用 `cacheKey(loc)`（或默认 pathname），保留按会话 / 参数隔离的语义
@@ -180,7 +199,14 @@ export function KeepAliveOutlet({
   if (match && levelKey !== undefined && liveElement && cacheActive) {
     if (isShell) {
       // 壳：刷新元素（参数跟随导航），保持单实例
-      setShellEntry(shellCache, levelKey, liveElement, location)
+      // 缓存位置用「自身已消费的路径前缀」而非当前最深叶子路径，
+      // 使壳内 useLocation({ scope: 'cache' }) 稳定代表本层级
+      const shellLocation: LocationLike = {
+        pathname: fillPath(getMatchHead(match).path, match.params ?? {}),
+        search: location.search,
+        hash: location.hash,
+      }
+      setShellEntry(shellCache, levelKey, liveElement, shellLocation)
       currentInCache = true
     }
     else if (eligible) {

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Outlet } from '../components/Outlet'
 import { createBrowserRouter } from '../create-browser-router'
+import { useLocation } from '../hooks/use-location'
 import { useParams } from '../hooks/use-params'
 import { RouterProvider } from '../router'
 
@@ -371,6 +372,67 @@ describe('keep-alive 缺陷回归', () => {
       },
     ])
     expect(screen.getByTestId('page')).toBeTruthy()
+    router.dispose()
+  })
+
+  it('壳的 useLocation({scope:cache}) 稳定代表自身层级，不跟随叶子', async () => {
+    function Shell() {
+      const loc = useLocation({ scope: 'cache' })
+      return (
+        <div>
+          <span data-testid="shell-cache">{loc.pathname}</span>
+          <Outlet />
+        </div>
+      )
+    }
+    const routes: RouteObject[] = [
+      {
+        path: '/',
+        component: Shell,
+        children: [
+          { path: '/a', component: () => <div data-testid="a">a</div> },
+          { path: '/b', component: () => <div data-testid="b">b</div> },
+        ],
+      },
+    ]
+    setPath('/a')
+    const router = await mount(routes)
+    expect(screen.getByTestId('shell-cache').textContent).toBe('/')
+
+    await nav(router, '/b')
+    // 修复前：壳的 cache location 被叶子覆盖 → 显示 '/b'
+    expect(screen.getByTestId('shell-cache').textContent).toBe('/')
+
+    router.dispose()
+  })
+
+  it('参数壳的 scope:cache 取自身已消费前缀，并随参数更新', async () => {
+    function Shell() {
+      const loc = useLocation({ scope: 'cache' })
+      return (
+        <div>
+          <span data-testid="shell-cache">{loc.pathname}</span>
+          <Outlet />
+        </div>
+      )
+    }
+    const routes: RouteObject[] = [
+      {
+        path: '/dash/:id',
+        component: Shell,
+        children: [
+          { path: '/dash/:id/profile', component: () => <div data-testid="leaf">leaf</div> },
+        ],
+      },
+    ]
+    setPath('/dash/1/profile')
+    const router = await mount(routes)
+    // 自身消费前缀 '/dash/1'，而非叶子 '/dash/1/profile'
+    expect(screen.getByTestId('shell-cache').textContent).toBe('/dash/1')
+
+    await nav(router, '/dash/2/profile')
+    expect(screen.getByTestId('shell-cache').textContent).toBe('/dash/2')
+
     router.dispose()
   })
 })
