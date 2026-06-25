@@ -406,6 +406,35 @@ describe('keep-alive 缺陷回归', () => {
     router.dispose()
   })
 
+  it('options.layouts 全局布局单实例，不随缓存页复制', async () => {
+    let appLayoutLive = 0
+    function AppLayout({ children }: { children: any }) {
+      useEffect(() => {
+        appLayoutLive++
+        return () => {
+          appLayoutLive--
+        }
+      }, [])
+      return <div data-testid="app-layout">{children}</div>
+    }
+    const routes: RouteObject[] = [
+      { path: '/a', component: () => <div data-testid="a">a</div> },
+      { path: '/b', component: () => <div data-testid="b">b</div> },
+    ]
+    setPath('/a')
+    const router = await mount(routes, { cache: { limit: 10 }, layouts: [{ component: AppLayout }] })
+    expect(appLayoutLive).toBe(1)
+    expect(screen.getAllByTestId('app-layout')).toHaveLength(1)
+
+    await nav(router, '/b')
+    await nav(router, '/a')
+    // 修复前：布局被烤进每个缓存页 → appLayoutLive 随缓存页数增长（2、3…）
+    expect(appLayoutLive).toBe(1)
+    expect(screen.getAllByTestId('app-layout')).toHaveLength(1)
+
+    router.dispose()
+  })
+
   it('参数壳的 scope:cache 取自身已消费前缀，并随参数更新', async () => {
     function Shell() {
       const loc = useLocation({ scope: 'cache' })

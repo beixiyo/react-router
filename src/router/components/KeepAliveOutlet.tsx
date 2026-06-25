@@ -185,11 +185,8 @@ export function KeepAliveOutlet({
       element = createRouteElement(match.route, match, options)
     }
 
-    if (isRoot && element)
-      element = wrapWithLayout(element, options, location.pathname)
-
     return element
-  }, [match, location.pathname, location.search, location.hash, options.routeConfig, options.notFoundComponent, options.layouts, isRoot, generation])
+  }, [match, location.pathname, location.search, location.hash, options.routeConfig, options.notFoundComponent, isRoot, generation])
 
   /**
    * 渲染期同步缓存（幂等）：把当前层要保活的元素写入对应缓存
@@ -231,7 +228,7 @@ export function KeepAliveOutlet({
     ? []
     : [...leafCache.values()]
 
-  return (
+  const content = (
     <KeepAliveProvider>
       { shellEntries.map(item => (
         <LocationCtx.Provider key={`${item.key}#${item.seq ?? 0}`} value={item.location}>
@@ -256,4 +253,10 @@ export function KeepAliveOutlet({
       { !currentInCache && liveElement }
     </KeepAliveProvider>
   )
+
+  // 全局布局（options.layouts）在缓存之外、整层只包裹一次 → 单实例，
+  // 不随每个被缓存的页面复制（否则其副作用 / 订阅会按缓存页数重复运行）
+  return isRoot
+    ? wrapWithLayout(content, options, location.pathname)
+    : content
 }
