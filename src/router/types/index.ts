@@ -229,7 +229,16 @@ export interface Router {
   afterEach: (guard: AfterEachGuard) => RemoveGuard
   /** 清空所有 keep-alive 页面缓存 */
   clearCache: () => void
-  /** 删除匹配指定 key 的 keep-alive 页面缓存 */
+  /**
+   * 删除匹配指定 key 的 keep-alive 页面缓存
+   *
+   * key 的形态：
+   * - 叶子页：`cacheKey(loc)`（默认即 pathname，如 `/users/1/profile`）
+   * - 布局壳：路由「结构化模式」，即路由 path 原样（如 `/users/:id`、`/files/**`），
+   *   不是导航时的具体路径——传 `/users/1` 删不掉 `/users/:id` 壳
+   *
+   * 字符串匹配为全等；需按前缀 / 跨参数删除时请用 RegExp 或谓词函数
+   */
   deleteCache: (matcher: RouterCacheDeleteMatcher) => void
   /** 订阅 keep-alive 页面缓存控制事件，供 RouterProvider 内部使用 */
   subscribeCache: (listener: RouterCacheListener) => RemoveGuard

@@ -2,9 +2,9 @@
 export type RouterCacheDeleteMatcher = string | RegExp | ((key: string) => boolean)
 
 /** keep-alive 缓存控制事件 */
-export type RouterCacheEvent =
-  | { type: 'clear' }
-  | { type: 'delete', matcher: RouterCacheDeleteMatcher }
+export type RouterCacheEvent
+  = | { type: 'clear' }
+    | { type: 'delete', matcher: RouterCacheDeleteMatcher }
 
 /** keep-alive 缓存控制事件监听器 */
 export type RouterCacheListener = (event: RouterCacheEvent) => void
@@ -46,7 +46,11 @@ export function isCacheKeyMatched(key: string, matcher: RouterCacheDeleteMatcher
 export interface RouterCacheController {
   /** 清空所有 keep-alive 页面缓存 */
   clearCache: () => void
-  /** 删除匹配指定 key 的 keep-alive 页面缓存 */
+  /**
+   * 删除匹配指定 key 的 keep-alive 页面缓存
+   * 叶子页 key 为 `cacheKey(loc)`（默认 pathname）；布局壳 key 为路由结构化模式（path 原样，如 `/users/:id`）。
+   * 字符串为全等匹配，跨参数 / 前缀删除请用 RegExp 或谓词函数
+   */
   deleteCache: (matcher: RouterCacheDeleteMatcher) => void
   /** 订阅 keep-alive 页面缓存控制事件 */
   subscribeCache: (listener: RouterCacheListener) => () => void
