@@ -4,9 +4,9 @@
 
 [中文 README](./README.md) | [English README](./README.en.md)
 
-## [Unreleased]
+## [0.1.2] - 2026-06-26
 
-keep-alive 引擎的一轮缺陷修复。无公共 API 变更，暂未发布到 npm
+keep-alive 引擎的一轮缺陷修复。无公共 API 变更
 
 ### 修复
 
