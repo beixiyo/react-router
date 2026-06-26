@@ -1,6 +1,7 @@
 {
   "name": "@jl-org/react-router",
   "version": "0.1.2",
+  "description": "受 Vue Router 启发的 React 路由库，内置组件 keep-alive/LRU 缓存、Vue 风格守卫与 Koa 风格中间件 | Vue Router-inspired routing for React with built-in component keep-alive/LRU cache, Vue-style guards and Koa-style middleware",
   "type": "module",
   "main": "./dist-lib/index.cjs",
   "module": "./dist-lib/index.mjs",
