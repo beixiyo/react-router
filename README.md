@@ -193,6 +193,23 @@ options: {
 | `useLocation()` | 全局当前 `pathname`、`search`、`hash`，默认跟随真实路由切换 |
 | `useLocation({ scope: 'cache' })` | 当前 keep-alive 缓存 entry 的 `pathname`、`search`、`hash` |
 | `useParams()` | `{ params, query, hash }` |
+| `useRouteKeepAliveEffect(effect)` | keep-alive 缓存页的可见性感知 `useEffect`：激活时跑 `effect`，**失活（被缓存隐藏）/ 卸载**时跑其 cleanup |
+
+### `useRouteKeepAliveEffect`
+
+开启 `cache` 后，离开缓存页只是把它**隐藏**（组件不卸载），普通 `useEffect` 的 cleanup 此时**不会触发** —— 凡是「仅当前页可见时才该生效」的副作用 / 信号（如上报“当前在某页”、暂停视频、释放摄像头），用普通 `useEffect` 都会在切走后残留。`useRouteKeepAliveEffect` 专门解决这点：
+
+```tsx
+useRouteKeepAliveEffect(() => {
+  reportActiveSurface(true)
+  return () => reportActiveSurface(false) // 隐藏 / 卸载都会复位
+})
+```
+
+- 页面**激活**（首次可见，或被缓存隐藏后切回）时执行 `effect`；**失活（隐藏）或卸载**时执行其返回的 cleanup
+- 自动解析所属缓存单元，**无需手动传 key**；内部用 ref 始终调用最新闭包，故不需要依赖数组
+- 覆盖「晚于初次激活才挂载的后代」（如异步 / `SplitPane` 内晚挂载的子组件）：挂载即补激活
+- 未被 keep-alive 包裹时退化为普通 `useEffect`（挂载执行、卸载清理）
 
 ## 🔌 守卫与中间件
 

@@ -193,6 +193,23 @@ options: {
 | `useLocation()` | Global current `pathname`, `search`, and `hash`; follows real route changes by default |
 | `useLocation({ scope: 'cache' })` | `pathname`, `search`, and `hash` of the current keep-alive cache entry |
 | `useParams()` | `{ params, query, hash }` |
+| `useRouteKeepAliveEffect(effect)` | Visibility-aware `useEffect` for keep-alive cached pages: runs `effect` on activate, runs its cleanup on **deactivate (hidden by cache) / unmount** |
+
+### `useRouteKeepAliveEffect`
+
+With `cache` enabled, leaving a cached page only **hides** it (the component stays mounted), so a plain `useEffect` cleanup **does not fire**. Any "active only while this page is visible" side effect / signal (e.g. reporting "I'm on page X", pausing a video, releasing the camera) would leak after navigating away. This hook fixes exactly that:
+
+```tsx
+useRouteKeepAliveEffect(() => {
+  reportActiveSurface(true)
+  return () => reportActiveSurface(false) // reset on hide / unmount
+})
+```
+
+- Runs `effect` on **activate** (first visible, or switched back after being hidden); runs its cleanup on **deactivate (hidden) or unmount**
+- Auto-resolves the owning cache entry — **no manual key**; always calls the latest closure via a ref, so no deps array needed
+- Covers descendants that **mount later than the initial activation** (e.g. async / late-mounted children inside a `SplitPane`): activates on mount
+- Falls back to a plain `useEffect` when not wrapped by keep-alive (run on mount, clean up on unmount)
 
 ## 🔌 Guards & Middleware
 

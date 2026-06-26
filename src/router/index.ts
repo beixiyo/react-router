@@ -4,9 +4,12 @@
  * 导出所有外部需要使用的 API、组件、Hooks 和类型
  */
 
-export * from './components/Link'
+// keep-alive 缓存页可见性感知 effect（KeepAlive 组件本身由路由内部使用，不对外导出）
+export { useRouteKeepAliveEffect } from './components/KeepAlive/hooks'
+export type { KeepAliveEffectCallback } from './components/KeepAlive/type'
 
 // 组件
+export * from './components/Link'
 export * from './components/Outlet'
 export * from './create-browser-router'
 export * from './create-hash-router'
