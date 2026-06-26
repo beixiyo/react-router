@@ -4,6 +4,14 @@
 
 [中文 README](./README.md) | [English README](./README.en.md)
 
+## [0.1.3] - 2026-06-26
+
+新增 keep-alive 可见性感知 effect。公共 API 变更（新增一个导出）
+
+### 新增
+
+- **`useRouteKeepAliveEffect(effect)`**：keep-alive 缓存页的可见性感知 effect（`useEffect` 的缓存版）——页面**激活**（首次可见，或被缓存隐藏后切回）时执行 `effect`，**失活（被缓存隐藏）或卸载**时执行其返回的 cleanup。解决「缓存页用普通 `useEffect` 时，cleanup 只在真卸载触发、隐藏时不触发」导致的副作用 / 当前页信号残留；自动经 context 解析所属缓存单元（无需手动传 `uniqueKey`），内部用 ref 始终调用最新闭包，并覆盖「晚于初次激活才挂载的后代」（挂载即补激活，幂等去重）。`KeepAlive` 组件本身由路由内部使用，不对外导出
+
 ## [0.1.2] - 2026-06-26
 
 keep-alive 引擎的一轮缺陷修复。无公共 API 变更
