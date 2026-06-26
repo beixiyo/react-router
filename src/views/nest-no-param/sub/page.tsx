@@ -1,10 +1,14 @@
+import { useState } from 'react'
 import { Link } from '@/router'
 import { randomColor } from '@/utils'
 
 export default function page() {
+  // 同父页：一次性写入 state，作为叶子 keep-alive 实例存活的探针
+  const [bg] = useState(randomColor)
+
   return (
     <div style={{
-      background: randomColor(),
+      background: bg,
     }}
     >
       <h3 className="text-lg font-medium text-white mb-3">子路由内容：</h3>
