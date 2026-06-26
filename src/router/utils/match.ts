@@ -133,7 +133,7 @@ function normalizePattern(pattern: string): string {
 //
 /** 通配符（通过 normalizePattern 转换）： */
 // - `matchPath('/*', '/any/path')` → `{ splat1: 'any/path' }` (单星号 `/*` 转换为 `/:splat1`，键名带数字)
-// - `matchPath('/files/**', '/files/a/b/c.txt')` → `{ splat: 'a/b/c.txt' }` (双星号 `/**` 转换为 `/*splat`，键名无数字)
+// - `matchPath('/files/**', '/files/a/b/c.txt')` → `{ splat: ['a', 'b', 'c.txt'] }` (双星号 `/**` 转换为 `/*splat`，键名无数字，值为各段组成的数组)
 // - `matchPath('/users/*/posts/*', '/users/1/posts/2')` → `{ splat1: '1', splat2: '2' }` (多个单星号递增编号)
 //
 /** 边界情况： */
