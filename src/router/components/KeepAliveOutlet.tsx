@@ -3,6 +3,7 @@ import type { CacheEntry } from '../renderer/cache'
 import type { LocationLike, MatchResult, RouteObject, RouterOptions } from '../types'
 import { createElement, useContext, useEffect, useMemo, useReducer, useRef } from 'react'
 import { LocationCtx, RouterCtx } from '../context'
+import { useBypassEntry } from '../renderer/bypass-transition'
 import { getCachedElement, setShellEntry, updateCache, useCacheConfig, useCacheMap } from '../renderer/cache'
 import { isCacheKeyMatched } from '../renderer/cache-control'
 import { createRouteElement, emptyElement } from '../renderer/route-matcher'
@@ -228,6 +229,23 @@ export function KeepAliveOutlet({
     ? []
     : [...leafCache.values()]
 
+  /**
+   * 未缓存路由的退场窗口：仅在配置了 options.transition 时启用，
+   * 否则维持原有裸渲染（!currentInCache && liveElement），零行为差异
+   */
+  const transitionEnabled = Boolean(options.transition)
+  const bypassKey = (transitionEnabled && !currentInCache && match && levelKey !== undefined)
+    ? `${isShell
+      ? 'shell'
+      : 'leaf'}:${levelKey}`
+    : null
+  const { current: bypassCurrent, exiting: bypassExiting, onExited: onBypassExited } = useBypassEntry(
+    bypassKey,
+    bypassKey
+      ? liveElement
+      : null,
+  )
+
   const content = (
     <KeepAliveProvider>
       { shellEntries.map(item => (
@@ -235,6 +253,7 @@ export function KeepAliveOutlet({
           <KeepAlive
             uniqueKey={`${scopeId}::shell::${item.key}#${item.seq ?? 0}`}
             active={isShell && item.key === levelKey}
+            transition={options.transition}
           >
             { item.element }
           </KeepAlive>
@@ -245,12 +264,40 @@ export function KeepAliveOutlet({
           <KeepAlive
             uniqueKey={`${scopeId}::leaf::${item.key}#${item.seq ?? 0}`}
             active={!isShell && eligible && item.key === levelKey}
+            transition={options.transition}
           >
             { item.element }
           </KeepAlive>
         </LocationCtx.Provider>
       )) }
-      { !currentInCache && liveElement }
+      { !transitionEnabled && !currentInCache && liveElement }
+      {
+        /*
+         * key 必须只取决于 seq（同一逻辑槽位在 current ⇄ exiting 之间迁移时保持不变），
+         * 否则 React 会因 key 变化而卸载重挂，白白丢失「仍保留挂载播放退场动画」的效果
+         */
+      }
+      { transitionEnabled && bypassExiting && (
+        <KeepAlive
+          key={`bypass-${bypassExiting.seq}`}
+          uniqueKey={`${scopeId}::bypass::${bypassExiting.key}#${bypassExiting.seq}`}
+          active={false}
+          transition={options.transition}
+          onExited={onBypassExited}
+        >
+          { bypassExiting.element }
+        </KeepAlive>
+      ) }
+      { transitionEnabled && bypassCurrent && (
+        <KeepAlive
+          key={`bypass-${bypassCurrent.seq}`}
+          uniqueKey={`${scopeId}::bypass::${bypassCurrent.key}#${bypassCurrent.seq}`}
+          active
+          transition={options.transition}
+        >
+          { bypassCurrent.element }
+        </KeepAlive>
+      ) }
     </KeepAliveProvider>
   )
 

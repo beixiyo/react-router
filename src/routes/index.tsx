@@ -9,6 +9,9 @@ export const router = createHashRouter({
     cache: { limit: 2, include: ['/', '/profile', /^\/nest-no-param/] },
     // loadingComponent: () => <div>全局自定义 Loading</div>,
 
+    // 路由过渡动画：与 keep-alive 缓存无关，Home/Profile（已缓存）与 Params（未缓存）都能演示
+    transition: { exitTimeout: 350, enterTimeout: 350 },
+
     // ========== 全局前置守卫 ==========
     beforeEach: async (to: NavigationGuardContext, from: NavigationGuardContext, next: GuardNext) => {
       console.log('🔒 [全局前置守卫]', from.to.pathname, '→', to.to.pathname)

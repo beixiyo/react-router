@@ -2,6 +2,7 @@
  * 路由与中间件类型定义
  */
 import type { ComponentType, LazyExoticComponent, ReactElement, ReactNode } from 'react'
+import type { RouteTransitionOptions } from '../components/KeepAlive/type'
 import type { NavigateOptions } from '../hooks/types'
 import type { RouterCacheDeleteMatcher, RouterCacheListener } from '../renderer/cache-control'
 
@@ -142,6 +143,12 @@ export interface RouterOptions {
   notFoundComponent?: ReactElement | ComponentType<any>
   /** 布局列表：按 pathname 匹配，第一个命中的布局包裹渲染结果 */
   layouts?: LayoutConfig[]
+  /**
+   * 路由过渡动画配置：传入后路由切换会经过 entering / exiting 窗口而非立即切换，
+   * 与 keep-alive 缓存完全独立——未缓存的路由同样能拿到退场窗口
+   * 不传（默认）则完全不启用，行为与未接入前一致
+   */
+  transition?: RouteTransitionOptions
 }
 
 /**

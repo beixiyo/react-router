@@ -1,6 +1,6 @@
-import type { KeepAliveContextType, KeepAliveEffectCallback } from './type'
+import type { KeepAliveContextType, KeepAliveEffectCallback, RouteTransitionState } from './type'
 import { useContext, useEffect, useRef } from 'react'
-import { KeepAliveContext, KeepAliveKeyContext } from './context'
+import { KeepAliveContext, KeepAliveKeyContext, RouteTransitionContext } from './context'
 
 /**
  * ## 必须在 KeepAlive 组件传递 uniqueKey 属性才能使用
@@ -105,4 +105,21 @@ export function useRouteKeepAliveEffect(effect: KeepAliveEffectCallback): void {
       deactivate()
     }
   }, [key, registerActiveEffect, registerDeactiveEffect, delActiveEffect, delDeactiveEffect])
+}
+
+/**
+ * 读取当前路由过渡状态：`entering`/`entered`/`exiting`/`exited` 四个阶段，
+ * 以及 `finishEnter`/`finishExit` 两个手动确认回调
+ *
+ * 未开启过渡（{@link RouterOptions.transition} 未配置）或未被 KeepAlive 包裹时返回 `null`——
+ * 消费者应将其视为「无需关心过渡，正常渲染即可」，不必对 `null` 做降级动画处理
+ *
+ * @example
+ * const transition = useRouteTransition()
+ * if (transition?.phase === 'exiting') {
+ *   // 播放退场动画，动画结束后调用 transition.finishExit()
+ * }
+ */
+export function useRouteTransition(): RouteTransitionState | null {
+  return useContext(RouteTransitionContext)
 }

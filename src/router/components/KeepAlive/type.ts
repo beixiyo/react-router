@@ -7,6 +7,59 @@ export interface KeepAliveProps {
    * @default false
    */
   forceRender?: boolean
+  /**
+   * 过渡配置：传入后 active 的切换不再立即生效，而是先经过 entering / exiting 窗口。
+   * 不传时行为与未接入过渡前完全一致（立即切换）
+   * @default undefined
+   */
+  transition?: RouteTransitionOptions
+  /**
+   * 退场彻底完成（phase 变为 exited）时触发一次
+   * 供上层清理临时占位（如未缓存路由的退场槽位），缓存条目通常无需使用
+   */
+  onExited?: () => void
+}
+
+/**
+ * 单个 KeepAlive 实例当前所处的过渡阶段
+ * - entering：已激活但进场动画尚未确认结束
+ * - entered：进场完成，稳定展示中
+ * - exiting：逻辑上已失活，但仍保留挂载以播放退场动画
+ * - exited：退场完成（即将真正被挂起 / 移出渲染树）
+ */
+export type RouteTransitionPhase = 'entering' | 'entered' | 'exiting' | 'exited'
+
+/**
+ * 路由过渡配置。不传（`undefined`）则完全不启用过渡，零行为差异
+ */
+export interface RouteTransitionOptions {
+  /**
+   * 进场兜底超时（毫秒）：超过该时长仍未调用 finishEnter 则自动判定为进场完成
+   * @default 500
+   */
+  enterTimeout?: number
+  /**
+   * 退场兜底超时（毫秒）：超过该时长仍未调用 finishExit 则自动判定为退场完成
+   * @default 500
+   */
+  exitTimeout?: number
+  /**
+   * 是否遵循 `prefers-reduced-motion: reduce`，命中时跳过过渡窗口、立即切换
+   * @default true
+   */
+  respectReducedMotion?: boolean
+}
+
+/**
+ * 通过 {@link useRouteTransition} 暴露给子树的过渡状态
+ */
+export interface RouteTransitionState {
+  /** 当前所处阶段 */
+  phase: RouteTransitionPhase
+  /** 手动确认进场动画已结束；不调用时由 enterTimeout 兜底 */
+  finishEnter: () => void
+  /** 手动确认退场动画已结束；不调用时由 exitTimeout 兜底 */
+  finishExit: () => void
 }
 
 /**
