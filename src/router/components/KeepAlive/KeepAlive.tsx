@@ -38,11 +38,12 @@ export const KeepAlive = memo(({
   forceRender = false,
   transition,
   onExited,
+  direction,
 }: KeepAliveProps & { uniqueKey?: keyof any }) => {
   const { findEffect } = useContext(KeepAliveContext)
   const [renderKey, setRenderKey] = useState(0)
 
-  const { effectiveActive, phase, finishEnter, finishExit } = useDelayedActive(active, transition, onExited)
+  const { effectiveActive, phase, finishEnter, finishExit, direction: capturedDirection } = useDelayedActive(active, transition, onExited, direction)
 
   /**
    * 触发激活 / 失活钩子
@@ -66,9 +67,9 @@ export const KeepAlive = memo(({
 
   const transitionState = useMemo(
     () => (transition
-      ? { phase, finishEnter, finishExit }
+      ? { phase, finishEnter, finishExit, direction: capturedDirection }
       : null),
-    [transition, phase, finishEnter, finishExit],
+    [transition, phase, finishEnter, finishExit, capturedDirection],
   )
 
   return (

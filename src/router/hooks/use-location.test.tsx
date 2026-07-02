@@ -21,6 +21,7 @@ describe('useLocation', () => {
       deleteCache: vi.fn(),
       subscribeCache: vi.fn(),
       subscribe: vi.fn(),
+      navigationDirection: 'replace',
     }
 
     const { result } = renderHook(() => useLocation(), {
@@ -78,6 +79,7 @@ describe('useLocation', () => {
       deleteCache: vi.fn(),
       subscribeCache: vi.fn(),
       subscribe: vi.fn(),
+      navigationDirection: 'replace',
     }
 
     const { result } = renderHook(() => useLocation({ scope: 'cache' }), {
@@ -113,6 +115,7 @@ describe('useLocation', () => {
         subscribers.add(listener)
         return () => subscribers.delete(listener)
       }),
+      navigationDirection: 'replace',
     }
 
     const { result } = renderHook(() => useLocation(), {

@@ -246,6 +246,9 @@ export function KeepAliveOutlet({
       : null,
   )
 
+  /** 当前导航方向快照，随 router 通知同一渲染批次更新，透传给每个 KeepAlive 供其在 active 切换瞬间捕获 */
+  const navigationDirection = router?.navigationDirection
+
   const content = (
     <KeepAliveProvider>
       { shellEntries.map(item => (
@@ -254,6 +257,7 @@ export function KeepAliveOutlet({
             uniqueKey={`${scopeId}::shell::${item.key}#${item.seq ?? 0}`}
             active={isShell && item.key === levelKey}
             transition={options.transition}
+            direction={navigationDirection}
           >
             { item.element }
           </KeepAlive>
@@ -265,6 +269,7 @@ export function KeepAliveOutlet({
             uniqueKey={`${scopeId}::leaf::${item.key}#${item.seq ?? 0}`}
             active={!isShell && eligible && item.key === levelKey}
             transition={options.transition}
+            direction={navigationDirection}
           >
             { item.element }
           </KeepAlive>
@@ -283,6 +288,7 @@ export function KeepAliveOutlet({
           uniqueKey={`${scopeId}::bypass::${bypassExiting.key}#${bypassExiting.seq}`}
           active={false}
           transition={options.transition}
+          direction={navigationDirection}
           onExited={onBypassExited}
         >
           { bypassExiting.element }
@@ -294,6 +300,7 @@ export function KeepAliveOutlet({
           uniqueKey={`${scopeId}::bypass::${bypassCurrent.key}#${bypassCurrent.seq}`}
           active
           transition={options.transition}
+          direction={navigationDirection}
         >
           { bypassCurrent.element }
         </KeepAlive>

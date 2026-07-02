@@ -18,7 +18,20 @@ export interface KeepAliveProps {
    * 供上层清理临时占位（如未缓存路由的退场槽位），缓存条目通常无需使用
    */
   onExited?: () => void
+  /**
+   * 触发本次 active 切换的导航方向，由 {@link Router.navigationDirection} 透传而来
+   * @default 'replace'
+   */
+  direction?: NavigationDirection
 }
+
+/**
+ * 导航方向：用于让过渡动画感知「前进 / 后退」，从而选择对应的滑动方向
+ * - forward：push 新增历史记录，或浏览器原生前进按钮
+ * - back：浏览器原生后退按钮，或 `navigate(-1)` / `back()`
+ * - replace：替换当前历史记录（无栈方向语义），如显式 replace、守卫重定向
+ */
+export type NavigationDirection = 'forward' | 'back' | 'replace'
 
 /**
  * 单个 KeepAlive 实例当前所处的过渡阶段
@@ -60,6 +73,11 @@ export interface RouteTransitionState {
   finishEnter: () => void
   /** 手动确认退场动画已结束；不调用时由 exitTimeout 兜底 */
   finishExit: () => void
+  /**
+   * 触发本次进场 / 退场的导航方向，在 active 切换的瞬间被捕获快照，
+   * 之后即使全局方向再变化也不受影响（避免动画播放到一半方向突变）
+   */
+  direction: NavigationDirection
 }
 
 /**

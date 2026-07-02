@@ -1,4 +1,4 @@
-import type { RouteTransitionOptions } from './type'
+import type { NavigationDirection, RouteTransitionOptions } from './type'
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDelayedActive } from './use-delayed-active'
@@ -161,5 +161,40 @@ describe('useDelayedActive', () => {
     expect(result.current.phase).toBe('exiting')
 
     vi.unstubAllGlobals()
+  })
+
+  it('未传 direction 时默认为 replace', () => {
+    const { result } = renderHook(() => useDelayedActive(true))
+    expect(result.current.direction).toBe('replace')
+  })
+
+  it('捕获 active 切换瞬间的 direction 快照', () => {
+    const transition: RouteTransitionOptions = { exitTimeout: 1000, enterTimeout: 1000 }
+    const { result, rerender } = renderHook(
+      ({ active, direction }: { active: boolean, direction: NavigationDirection }) => useDelayedActive(active, transition, undefined, direction),
+      { initialProps: { active: false, direction: 'replace' } },
+    )
+    expect(result.current.direction).toBe('replace')
+
+    rerender({ active: true, direction: 'forward' })
+    expect(result.current.phase).toBe('entering')
+    expect(result.current.direction).toBe('forward')
+  })
+
+  it('direction 变化但 active 未变化时不重新捕获，避免动画播放中途方向突变', () => {
+    const transition: RouteTransitionOptions = { exitTimeout: 1000, enterTimeout: 1000 }
+    const { result, rerender } = renderHook(
+      ({ active, direction }: { active: boolean, direction: NavigationDirection }) => useDelayedActive(active, transition, undefined, direction),
+      { initialProps: { active: true, direction: 'forward' } },
+    )
+    expect(result.current.direction).toBe('forward')
+
+    // active 未变化，仅全局方向后续又变了：不应影响本次已在播放的过渡
+    rerender({ active: true, direction: 'back' })
+    expect(result.current.direction).toBe('forward')
+
+    // active 变化（真正开始退场）才会重新捕获此刻的 direction
+    rerender({ active: false, direction: 'back' })
+    expect(result.current.direction).toBe('back')
   })
 })

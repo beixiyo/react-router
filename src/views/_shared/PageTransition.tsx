@@ -25,6 +25,21 @@ export function PageTransition({ children }: { children: ReactNode }) {
   const isExiting = transition?.phase === 'exiting'
   const isEntering = transition?.phase === 'entering' && !revealed
 
+  /**
+   * 有明确前进 / 后退方向（push、浏览器原生前进后退）时走横向滑动，方向感知；
+   * replace（守卫重定向、显式 replace）没有「栈方向」语义，退化为竖直淡入淡出
+   */
+  const direction = transition?.direction ?? 'replace'
+  const axis = direction === 'replace'
+    ? 'Y'
+    : 'X'
+  const enterOffset = direction === 'back'
+    ? -12
+    : 12
+  const exitOffset = direction === 'back'
+    ? 12
+    : -12
+
   return (
     <div
       className="transition-all duration-300 ease-out"
@@ -33,10 +48,10 @@ export function PageTransition({ children }: { children: ReactNode }) {
           ? 0
           : 1,
         transform: isExiting
-          ? 'translateY(-12px)'
+          ? `translate${axis}(${exitOffset}px)`
           : isEntering
-            ? 'translateY(12px)'
-            : 'translateY(0)',
+            ? `translate${axis}(${enterOffset}px)`
+            : `translate${axis}(0)`,
       }}
       onTransitionEnd={() => {
         if (transition?.phase === 'exiting')

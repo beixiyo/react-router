@@ -2,7 +2,7 @@
  * 路由与中间件类型定义
  */
 import type { ComponentType, LazyExoticComponent, ReactElement, ReactNode } from 'react'
-import type { RouteTransitionOptions } from '../components/KeepAlive/type'
+import type { NavigationDirection, RouteTransitionOptions } from '../components/KeepAlive/type'
 import type { NavigateOptions } from '../hooks/types'
 import type { RouterCacheDeleteMatcher, RouterCacheListener } from '../renderer/cache-control'
 
@@ -228,6 +228,11 @@ export interface Router {
   back: () => void
   /** 当前位置信息 */
   location: LocationLike
+  /**
+   * 最近一次导航的方向，供路由过渡动画感知滑动方向
+   * @default 'replace'
+   */
+  navigationDirection: NavigationDirection
   /** 注册全局前置守卫，返回移除函数 */
   beforeEach: (guard: NavigationGuard) => RemoveGuard
   /** 注册全局解析守卫，返回移除函数 */

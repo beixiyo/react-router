@@ -1,4 +1,4 @@
-import type { RouteTransitionOptions, RouteTransitionPhase } from './type'
+import type { NavigationDirection, RouteTransitionOptions, RouteTransitionPhase } from './type'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 const DEFAULT_TIMEOUT = 500
@@ -22,6 +22,7 @@ export function useDelayedActive(
   active: boolean,
   transition?: RouteTransitionOptions,
   onExited?: () => void,
+  direction?: NavigationDirection,
 ) {
   const [effectiveActive, setEffectiveActive] = useState(active)
   const [phase, setPhase] = useState<RouteTransitionPhase>(() => {
@@ -39,6 +40,11 @@ export function useDelayedActive(
   const seqRef = useRef(0)
   const onExitedRef = useRef(onExited)
   onExitedRef.current = onExited
+
+  /** 始终持有最新 direction；只在 active 切换的瞬间被读取快照，避免动画播放中途方向突变 */
+  const directionRef = useRef<NavigationDirection>(direction ?? 'replace')
+  directionRef.current = direction ?? 'replace'
+  const [capturedDirection, setCapturedDirection] = useState<NavigationDirection>(directionRef.current)
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -62,6 +68,7 @@ export function useDelayedActive(
   useEffect(() => {
     const mySeq = ++seqRef.current
     clearTimer()
+    setCapturedDirection(directionRef.current)
 
     const skipTransition = !transition
       || (transition.respectReducedMotion !== false && prefersReducedMotion())
@@ -102,5 +109,5 @@ export function useDelayedActive(
     finishExit,
   ])
 
-  return { effectiveActive, phase, finishEnter, finishExit }
+  return { effectiveActive, phase, finishEnter, finishExit, direction: capturedDirection }
 }

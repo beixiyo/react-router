@@ -13,8 +13,12 @@ import { nanoid } from 'nanoid'
 import { createRouterCacheController } from './renderer/cache-control'
 import { collectMiddlewares, compose, matchRoutes, normalizePathStartSlash, parseHash, parseQuery, parseUrl } from './utils'
 import { GuardManager } from './utils/guard-manager'
+import { createNavigationDirectionTracker, readNavigationPosition } from './utils/nav-direction'
 import { createPushMethod, createReplaceMethod } from './utils/push-replace'
 import { buildUrl } from './utils/url'
+
+/** runNavigation 的触发来源，决定如何打点推导 navigationDirection */
+type NavigationSource = 'push' | 'replace' | 'popstate'
 
 /**
  * URL 适配器接口，用于处理不同路由模式下的 URL 操作
@@ -78,6 +82,7 @@ export function createBaseRouter<T extends BaseRouterInstance>(
   const urlAdapter = config.urlAdapter
   const guardManager = new GuardManager()
   const cacheController = createRouterCacheController()
+  const directionTracker = createNavigationDirectionTracker()
   const subscribers = new Set<(location: LocationLike) => void>()
   let disposed = false
 
@@ -97,6 +102,12 @@ export function createBaseRouter<T extends BaseRouterInstance>(
       return
     currentLocation = getLocation()
     router.location = currentLocation
+    /**
+     * router 由 `{ ...navigationAdapter }` 展开构造（见 create-hash/browser-router.ts），
+     * navigationAdapter 上的 getter 在展开那一刻就被求值成了静态值，之后不会再变——
+     * 必须像 location 一样，每次 notify 时手动同步，否则 navigationDirection 永远停在初始值
+     */
+    router.navigationDirection = directionTracker.current
     subscribers.forEach((listener) => {
       try {
         listener(currentLocation)
@@ -138,7 +149,9 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     }
   }
 
-  const runNavigation = async (path: string, replaceHistory: boolean): Promise<void> => {
+  const runNavigation = async (path: string, replaceHistory: boolean, navSource: NavigationSource = replaceHistory
+    ? 'replace'
+    : 'push', incomingPosition?: number): Promise<void> => {
     const target = normalizePathStartSlash(path)
     const from = currentLocation
     const to = parseUrl(target)
@@ -149,7 +162,8 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     const beforeEachResult = await guardManager.runBeforeEach(toContext, fromContext)
     if (!beforeEachResult.shouldContinue) {
       if (beforeEachResult.redirectPath) {
-        await runNavigation(beforeEachResult.redirectPath, replaceHistory)
+        /** 守卫重定向无「栈方向」语义（如未登录跳转登录页），统一记为 replace，不触发方向滑动 */
+        await runNavigation(beforeEachResult.redirectPath, replaceHistory, 'replace')
       }
       return
     }
@@ -171,6 +185,7 @@ export function createBaseRouter<T extends BaseRouterInstance>(
       state: {},
       redirect: (p: string) => {
         urlAdapter.redirectURL(normalizePathStartSlash(p), base, replaceHistory)
+        directionTracker.markReplace()
         notify()
       },
     }
@@ -185,7 +200,8 @@ export function createBaseRouter<T extends BaseRouterInstance>(
           return
         }
         if (typeof p === 'string') {
-          runNavigation(p, replaceHistory).then(resolve).catch(reject)
+          /** 中间件重定向同样无「栈方向」语义，统一记为 replace */
+          runNavigation(p, replaceHistory, 'replace').then(resolve).catch(reject)
           return
         }
         resolve()
@@ -198,7 +214,7 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     const beforeResolveResult = await guardManager.runBeforeResolve(finalToContext, fromContext)
     if (!beforeResolveResult.shouldContinue) {
       if (beforeResolveResult.redirectPath) {
-        await runNavigation(beforeResolveResult.redirectPath, replaceHistory)
+        await runNavigation(beforeResolveResult.redirectPath, replaceHistory, 'replace')
       }
       return
     }
@@ -216,6 +232,14 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     else {
       urlAdapter.updateURL(resolvedTarget, base)
     }
+
+    if (navSource === 'popstate')
+      directionTracker.markPopState(incomingPosition)
+    else if (navSource === 'push')
+      directionTracker.markPush()
+    else
+      directionTracker.markReplace()
+
     notify()
 
     await guardManager.runAfterEach(resolvedToContext, fromContext)
@@ -224,10 +248,16 @@ export function createBaseRouter<T extends BaseRouterInstance>(
   const onLocationChange = async () => {
     if (disposed)
       return
+    /**
+     * 必须在任何 URL / history.state 变更之前读取：popstate 触发的瞬间，
+     * history.state 就是浏览器已经恢复好的目标条目状态；一旦下面走到 replaceURL
+     * （会整体覆盖 state），这个位点就再也读不回来了
+     */
+    const incomingPosition = readNavigationPosition()
     const loc = getLocation()
     const target = loc.pathname + loc.search + loc.hash
     try {
-      await runNavigation(target, true)
+      await runNavigation(target, true, 'popstate', incomingPosition)
     }
     catch (error) {
       console.error('[Router] Location change navigation error:', error)
@@ -256,6 +286,9 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     back: () => window.history.back(),
     get location() {
       return currentLocation
+    },
+    get navigationDirection() {
+      return directionTracker.current
     },
     beforeEach: guard => guardManager.beforeEach(guard),
     beforeResolve: guard => guardManager.beforeResolve(guard),

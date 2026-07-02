@@ -19,6 +19,7 @@ describe('useRouter', () => {
       deleteCache: vi.fn(),
       subscribeCache: vi.fn(),
       subscribe: vi.fn(),
+      navigationDirection: 'replace',
     }
 
     const { result } = renderHook(() => useRouter(), {

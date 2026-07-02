@@ -210,6 +210,7 @@ describe('setGlobalRouter 和 getGlobalRouter', () => {
       deleteCache: vi.fn(),
       subscribeCache: vi.fn(),
       subscribe: vi.fn(),
+      navigationDirection: 'replace',
     }
 
     setGlobalRouter(mockRouter)
