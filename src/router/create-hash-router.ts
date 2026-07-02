@@ -4,6 +4,7 @@ import type {
   HashRouterInstance,
   LocationLike,
 } from './types'
+import type { RouterHistoryState } from './utils/nav-direction'
 import { createBaseRouter } from './create-base-router'
 import { stripBase } from './utils'
 
@@ -59,42 +60,46 @@ function getLocationFromHash(base: string): LocationLike {
   }
 }
 
+/**
+ * push 语义的 hash 写入：`location.hash =` 无法携带 state，
+ * 在同一同步任务内紧随其后把位点补写到刚创建的新条目上——
+ * 异步到达的 hashchange 回声读到的就是已打好的位点，不会误判方向
+ */
+function pushHash(hashPath: string, state?: RouterHistoryState) {
+  window.location.hash = hashPath
+  // hash 改变会自动触发 hashchange 事件
+  if (state !== undefined)
+    window.history.replaceState(state, '', window.location.href)
+}
+
 const hashURLAdapter: URLAdapter = {
   getLocation: (base: string): LocationLike => {
     return getLocationFromHash(base)
   },
-  updateURL: (path: string, base: string) => {
-    // Hash 路由使用 window.location.hash 来设置路径
+  updateURL: (path: string, base: string, state?: RouterHistoryState) => {
     // base 在 hash 路由中通常不需要，但为了保持一致性，我们保留它
     const hashPath = base
       ? `${base}${path}`
       : path
-    window.location.hash = hashPath
-    // hash 改变会自动触发 hashchange 事件
+    pushHash(hashPath, state)
   },
-  replaceURL: (path: string, base: string) => {
-    // Hash 路由使用 window.location.hash 来设置路径
-    // base 在 hash 路由中通常不需要，但为了保持一致性，我们保留它
+  replaceURL: (path: string, base: string, state?: RouterHistoryState) => {
     const hashPath = base
       ? `${base}${path}`
       : path
     // 使用 history.replaceState 来替换当前历史记录，但不触发 hashchange
-    window.history.replaceState(null, '', `#${hashPath}`)
-    // 注意：replaceState 不会触发 hashchange，所以需要在外部手动触发 notify
+    // state 携带导航位点，与 URL 原子写入，不得覆写成 null
+    window.history.replaceState(state ?? null, '', `#${hashPath}`)
   },
-  redirectURL: (path: string, base: string, replaceHistory: boolean) => {
-    // Hash 路由使用 window.location.hash 来设置路径
-    // base 在 hash 路由中通常不需要，但为了保持一致性，我们保留它
+  redirectURL: (path: string, base: string, replaceHistory: boolean, state?: RouterHistoryState) => {
     const hashPath = base
       ? `${base}${path}`
       : path
     if (replaceHistory) {
-      // 使用 history.replaceState 来替换当前历史记录，但不触发 hashchange
-      window.history.replaceState(null, '', `#${hashPath}`)
+      window.history.replaceState(state ?? null, '', `#${hashPath}`)
     }
     else {
-      window.location.hash = hashPath
-      // hash 改变会自动触发 hashchange 事件
+      pushHash(hashPath, state)
     }
   },
   setupEventListener: (callback: () => void | Promise<void>) => {
@@ -118,23 +123,9 @@ const hashURLAdapter: URLAdapter = {
 }
 
 export function createHashRouter(config: CreateHashRouterConfig): HashRouterInstance {
-  return createBaseRouter(
-    {
-      routes: config.routes,
-      options: config.options,
-      urlAdapter: hashURLAdapter,
-    },
-    (params) => {
-      const router: HashRouterInstance = {
-        id: params.id,
-        routes: params.routes,
-        options: params.options,
-        base: params.base,
-        getLocation: params.getLocation,
-        ...params.navigationAdapter,
-        dispose: params.dispose,
-      }
-      return router
-    },
-  )
+  return createBaseRouter({
+    routes: config.routes,
+    options: config.options,
+    urlAdapter: hashURLAdapter,
+  })
 }

@@ -1,13 +1,8 @@
 import type { NavigationDirection, RouteTransitionOptions, RouteTransitionPhase } from './type'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { prefersReducedMotion } from '../../utils/prefers-reduced-motion'
 
 const DEFAULT_TIMEOUT = 500
-
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined'
-    && typeof window.matchMedia === 'function'
-    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-}
 
 /**
  * 让 `active` 的切换经过一段可控的过渡窗口，而非立即生效：
@@ -24,9 +19,11 @@ export function useDelayedActive(
   onExited?: () => void,
   direction?: NavigationDirection,
 ) {
-  const [effectiveActive, setEffectiveActive] = useState(active)
   const [phase, setPhase] = useState<RouteTransitionPhase>(() => {
-    if (!transition) {
+    /** 与 effect 的 skipTransition 判定保持一致，reduced-motion 用户首帧即为终态，不闪一帧隐藏 */
+    const skip = !transition
+      || (transition.respectReducedMotion !== false && prefersReducedMotion())
+    if (skip) {
       return active
         ? 'entered'
         : 'exited'
@@ -40,6 +37,9 @@ export function useDelayedActive(
   const seqRef = useRef(0)
   const onExitedRef = useRef(onExited)
   onExitedRef.current = onExited
+
+  /** effect 上一次见到的 active：用于识别「挂载即失活 / 配置变更但 active 未变」的重放 */
+  const lastActiveRef = useRef(active)
 
   /** 始终持有最新 direction；只在 active 切换的瞬间被读取快照，避免动画播放中途方向突变 */
   const directionRef = useRef<NavigationDirection>(direction ?? 'replace')
@@ -61,11 +61,15 @@ export function useDelayedActive(
   const finishExit = useCallback(() => {
     clearTimer()
     setPhase('exited')
-    setEffectiveActive(false)
     onExitedRef.current?.()
   }, [clearTimer])
 
+  const hasTransition = Boolean(transition)
+
   useEffect(() => {
+    const activeChanged = lastActiveRef.current !== active
+    lastActiveRef.current = active
+
     const mySeq = ++seqRef.current
     clearTimer()
     setCapturedDirection(directionRef.current)
@@ -74,7 +78,6 @@ export function useDelayedActive(
       || (transition.respectReducedMotion !== false && prefersReducedMotion())
 
     if (skipTransition) {
-      setEffectiveActive(active)
       setPhase(active
         ? 'entered'
         : 'exited')
@@ -82,7 +85,6 @@ export function useDelayedActive(
     }
 
     if (active) {
-      setEffectiveActive(true)
       setPhase('entering')
       timerRef.current = setTimeout(() => {
         if (seqRef.current === mySeq)
@@ -90,6 +92,14 @@ export function useDelayedActive(
       }, transition.enterTimeout ?? DEFAULT_TIMEOUT)
     }
     else {
+      /**
+       * 挂载即失活（或配置变更重放、StrictMode 二次执行）：没有退场可播，
+       * 直接落在 exited，不得启动退场窗口——否则会白冻结 exitTimeout 并假触发 onExited
+       */
+      if (!activeChanged) {
+        setPhase('exited')
+        return
+      }
       setPhase('exiting')
       timerRef.current = setTimeout(() => {
         if (seqRef.current === mySeq)
@@ -100,7 +110,7 @@ export function useDelayedActive(
     return clearTimer
   }, [
     active,
-    Boolean(transition),
+    hasTransition,
     transition?.enterTimeout,
     transition?.exitTimeout,
     transition?.respectReducedMotion,
@@ -108,6 +118,9 @@ export function useDelayedActive(
     finishEnter,
     finishExit,
   ])
+
+  /** 唯一真相源是 phase：仅在退场彻底完成后才视为失活（exiting 期间保持挂载播动画） */
+  const effectiveActive = phase !== 'exited'
 
   return { effectiveActive, phase, finishEnter, finishExit, direction: capturedDirection }
 }

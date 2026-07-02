@@ -2,9 +2,11 @@
  * 路由与中间件类型定义
  */
 import type { ComponentType, LazyExoticComponent, ReactElement, ReactNode } from 'react'
-import type { NavigationDirection, RouteTransitionOptions } from '../components/KeepAlive/type'
 import type { NavigateOptions } from '../hooks/types'
 import type { RouterCacheDeleteMatcher, RouterCacheListener } from '../renderer/cache-control'
+import type { NavigationDirection, RouteTransitionOptions } from './transition'
+
+export * from './transition'
 
 /**
  * 表示一个路由项的配置对象

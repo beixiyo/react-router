@@ -1,21 +1,37 @@
+import type { ComponentType } from 'react'
 import type { RouteObject } from '../router'
 /**
  * 从文件系统自动生成的路由配置
  */
 import { genRoutes } from '@jl-org/vite-auto-route'
 import { lazy } from 'react'
-import { createAuthMiddleware } from './middlewares'
 import { getUser } from '../store/auth'
 import Home from '../views'
+import { PageTransition } from '../views/_shared/PageTransition'
+import { createAuthMiddleware } from './middlewares'
 
 // 创建中间件
 const requireLogin = createAuthMiddleware(() => !!getUser(), '/login')
 const requireAdmin = createAuthMiddleware(() => getUser()?.role === 'admin', '/403')
 
+/**
+ * 路由级统一注入过渡动画：所有页面（含懒加载）都在此处包一层 PageTransition，
+ * 页面组件零侵入，新增页面自动获得过渡，无需（也不要）在页面内手动包裹
+ */
+function withPageTransition(Component: ComponentType<any>): ComponentType<any> {
+  return function PageWithTransition(props: any) {
+    return (
+      <PageTransition>
+        <Component {...props} />
+      </PageTransition>
+    )
+  }
+}
+
 export const fileRoutes: RouteObject[] = [
   {
     path: '/',
-    component: Home,
+    component: withPageTransition(Home),
     children: genRoutes({
       // 使用 customizeRoute 自定义路由项，例如添加 middleware
       customizeRoute: (_context) => {
@@ -41,12 +57,15 @@ export const fileRoutes: RouteObject[] = [
           if (route.path !== '/') {
             return {
               ...route,
-              component: lazy(route.component),
+              component: withPageTransition(lazy(route.component)),
             }
           }
 
           // 根路径保持原样（不使用懒加载）
-          return route
+          return {
+            ...route,
+            component: withPageTransition(route.component),
+          }
         }
       },
     }),

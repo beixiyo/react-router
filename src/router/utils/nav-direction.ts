@@ -1,21 +1,38 @@
-import type { NavigationDirection } from '../components/KeepAlive/type'
+import type { NavigationDirection } from '../types/transition'
 
-interface RouterHistoryState {
-  __routerPos?: number
+/**
+ * history.state 上存放导航位点的键
+ *
+ * 该键会驻留在宿主应用每个历史条目的 state 中，属于对外可见的暴露面，
+ * 使用方如需自行读写 history.state，应保留（展开合并）该字段
+ */
+export const NAV_POSITION_KEY = '__routerPos'
+
+/** 打在历史条目 state 上的路由位点形状 */
+export type RouterHistoryState = {
+  [K in typeof NAV_POSITION_KEY]?: number
 }
 
-/** 读取当前历史记录条目上打的位点，未打点则为 undefined */
+/**
+ * 读取当前历史记录条目上打的位点，未打点则为 undefined
+ *
+ * popstate / hashchange 触发时必须在事件回调的第一时间调用——
+ * 后续导航流程会用新 state 覆写当前条目，届时再读为时已晚
+ */
 export function readNavigationPosition(): number | undefined {
   if (typeof window === 'undefined')
     return undefined
 
-  return (window.history.state as RouterHistoryState | null)?.__routerPos
+  return (window.history.state as RouterHistoryState | null)?.[NAV_POSITION_KEY]
 }
 
-function stampPosition(position: number) {
-  const state = { ...(window.history.state as object ?? {}), __routerPos: position }
-  window.history.replaceState(state, '', window.location.href)
-}
+/**
+ * 本次导航对历史栈的实际操作
+ * - push：新增历史条目（pushState / `location.hash =`）
+ * - replace：替换当前条目（replaceState）
+ * - { pop }：浏览器原生前进 / 后退已完成的条目切换，携带事件第一时间捕获的目标条目位点
+ */
+export type NavigationOp = 'push' | 'replace' | { pop: number | undefined }
 
 /**
  * 追踪导航方向（forward / back / replace），供路由过渡动画感知滑动方向
@@ -28,48 +45,58 @@ export function createNavigationDirectionTracker() {
   let position = readNavigationPosition() ?? 0
   let direction: NavigationDirection = 'replace'
 
-  if (typeof window !== 'undefined' && readNavigationPosition() === undefined)
-    stampPosition(position)
-
   return {
     /** 当前导航方向快照 */
     get current(): NavigationDirection {
       return direction
     },
-    /** 程序化 push（新增历史记录）后调用 */
-    markPush() {
-      position += 1
-      stampPosition(position)
-      direction = 'forward'
-    },
-    /** 程序化 replace（替换当前记录）后调用，位点不变 */
-    markReplace() {
-      stampPosition(position)
-      direction = 'replace'
-    },
+
     /**
-     * 浏览器原生前进 / 后退（popstate / hashchange）后调用，比对位点推导方向
-     * @param incomingPosition 必须在事件触发的第一时间、任何 replaceURL/pushState 调用之前
-     *   用 {@link readNavigationPosition} 读取——本函数自身不会再读 `history.state`，
-     *   因为紧随其后的 replaceURL 会把它覆盖成 null，届时再读为时已晚
+     * 在写入 URL 之前调用：按实际历史操作推导方向、更新位点账本，
+     * 并返回应随本次 pushState / replaceState **一并原子写入**的 state。
+     * 位点与 URL 同一次写入落盘——杜绝「先写 URL 再补打点」在写入间隙
+     * 被回声 / 后续覆写抹掉的窗口
      *
-     * 位点缺失：无法判断，兜底为 replace（如手动改地址栏落到了没打过点的记录）；
-     * 位点等于当前值：这不是真正的浏览器前进 / 后退，而是「自身操作触发的回声事件」——
-     * hash 路由下 `location.hash =` 赋值本身就会异步再派发一次 hashchange，
-     * 此时位点是我们自己刚打上去的、和已记录的 position 相同，维持原 direction 不变，
-     * 避免把 markPush/markReplace 刚设好的方向又冲掉
+     * @param op 实际历史操作；方向语义与之解耦：重定向可能实际执行 push（新增条目、
+     *   位点必须递增），但方向仍记 replace，由 directionOverride 表达
+     * @param directionOverride 方向语义覆盖：守卫 / 中间件重定向无「栈方向」语义，一律记 replace
      */
-    markPopState(incomingPosition: number | undefined) {
-      if (typeof incomingPosition !== 'number') {
+    mark(op: NavigationOp, directionOverride?: NavigationDirection): RouterHistoryState {
+      if (op === 'push') {
+        position += 1
+        direction = 'forward'
+      }
+      else if (op === 'replace') {
         direction = 'replace'
-        return
       }
-      if (incomingPosition !== position) {
-        direction = incomingPosition < position
-          ? 'back'
-          : 'forward'
-        position = incomingPosition
+      else {
+        const incoming = op.pop
+
+        if (typeof incoming !== 'number') {
+          /**
+           * 落到没打过点的条目（如手动改地址栏产生的新条目）：方向无从判断兜底 replace；
+           * 位点按「新条目」递增，保证与相邻条目可比较、不产生同位点
+           */
+          direction = 'replace'
+          position += 1
+        }
+        else if (incoming !== position) {
+          direction = incoming < position
+            ? 'back'
+            : 'forward'
+          position = incoming
+        }
+        /**
+         * incoming === position：这不是真正的浏览器前进 / 后退，而是「自身操作触发的回声事件」——
+         * hash 路由下 `location.hash =` 赋值本身就会异步再派发一次 hashchange。
+         * 方向与位点均保持不动；返回值会把同一位点原样写回，条目不失点
+         */
       }
+
+      if (directionOverride)
+        direction = directionOverride
+
+      return { [NAV_POSITION_KEY]: position }
     },
   }
 }

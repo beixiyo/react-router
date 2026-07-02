@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import type { BypassSlot } from '../renderer/bypass-transition'
 import type { CacheEntry } from '../renderer/cache'
 import type { LocationLike, MatchResult, RouteObject, RouterOptions } from '../types'
 import { createElement, useContext, useEffect, useMemo, useReducer, useRef } from 'react'
@@ -28,6 +29,14 @@ function wrapWithLayout(element: ReactElement, options: RouterOptions, pathname:
 /** 本层匹配链的「头节点」：本层实际负责渲染的那个路由 */
 function getMatchHead(match: MatchResult): RouteObject {
   return match.routeChain?.[0] ?? match.route
+}
+
+/** keep-alive 条目的类别：壳 / 叶子 / 未缓存路由的临时退场槽位 */
+type AliveKind = 'shell' | 'leaf' | 'bypass'
+
+/** KeepAlive uniqueKey 的统一编码，避免拼接格式散落多处 */
+function makeAliveKey(scopeId: string, kind: AliveKind, key: keyof any, seq: number): string {
+  return `${scopeId}::${kind}::${String(key)}#${seq}`
 }
 
 /**
@@ -232,49 +241,44 @@ export function KeepAliveOutlet({
   /**
    * 未缓存路由的退场窗口：仅在配置了 options.transition 时启用，
    * 否则维持原有裸渲染（!currentInCache && liveElement），零行为差异
+   *
+   * 根层无匹配（404）同样走 bypass 展示 NotFound——旧的裸渲染分支在启用过渡后被关闭，
+   * 若不给 404 槽位，notFoundComponent 将没有任何渲染路径（空白页）
    */
   const transitionEnabled = Boolean(options.transition)
-  const bypassKey = (transitionEnabled && !currentInCache && match && levelKey !== undefined)
-    ? `${isShell
-      ? 'shell'
-      : 'leaf'}:${levelKey}`
-    : null
-  const { current: bypassCurrent, exiting: bypassExiting, onExited: onBypassExited } = useBypassEntry(
-    bypassKey,
-    bypassKey
-      ? liveElement
-      : null,
-  )
+  const bypassKey = !transitionEnabled || currentInCache
+    ? null
+    : (match && levelKey !== undefined)
+        ? `${isShell
+          ? 'shell'
+          : 'leaf'}:${levelKey}`
+        : (!match && isRoot)
+            ? '__notfound__'
+            : null
+  const { current: bypassCurrent, exiting: bypassExiting, onExited: onBypassExited } = useBypassEntry(bypassKey, liveElement)
 
   /** 当前导航方向快照，随 router 通知同一渲染批次更新，透传给每个 KeepAlive 供其在 active 切换瞬间捕获 */
   const navigationDirection = router?.navigationDirection
 
+  const renderCachedEntry = (kind: 'shell' | 'leaf', item: CacheEntry, active: boolean) => (
+    <LocationCtx.Provider key={`${item.key}#${item.seq ?? 0}`} value={item.location}>
+      <KeepAlive
+        uniqueKey={makeAliveKey(scopeId, kind, item.key, item.seq ?? 0)}
+        active={active}
+        transition={options.transition}
+        direction={navigationDirection}
+      >
+        { item.element }
+      </KeepAlive>
+    </LocationCtx.Provider>
+  )
+
+  const bypassSlots = [bypassExiting, bypassCurrent].filter((slot): slot is BypassSlot => slot !== null)
+
   const content = (
     <KeepAliveProvider>
-      { shellEntries.map(item => (
-        <LocationCtx.Provider key={`${item.key}#${item.seq ?? 0}`} value={item.location}>
-          <KeepAlive
-            uniqueKey={`${scopeId}::shell::${item.key}#${item.seq ?? 0}`}
-            active={isShell && item.key === levelKey}
-            transition={options.transition}
-            direction={navigationDirection}
-          >
-            { item.element }
-          </KeepAlive>
-        </LocationCtx.Provider>
-      )) }
-      { leafEntries.map(item => (
-        <LocationCtx.Provider key={`${item.key}#${item.seq ?? 0}`} value={item.location}>
-          <KeepAlive
-            uniqueKey={`${scopeId}::leaf::${item.key}#${item.seq ?? 0}`}
-            active={!isShell && eligible && item.key === levelKey}
-            transition={options.transition}
-            direction={navigationDirection}
-          >
-            { item.element }
-          </KeepAlive>
-        </LocationCtx.Provider>
-      )) }
+      { shellEntries.map(item => renderCachedEntry('shell', item, isShell && item.key === levelKey)) }
+      { leafEntries.map(item => renderCachedEntry('leaf', item, !isShell && eligible && item.key === levelKey)) }
       { !transitionEnabled && !currentInCache && liveElement }
       {
         /*
@@ -282,29 +286,20 @@ export function KeepAliveOutlet({
          * 否则 React 会因 key 变化而卸载重挂，白白丢失「仍保留挂载播放退场动画」的效果
          */
       }
-      { transitionEnabled && bypassExiting && (
+      { transitionEnabled && bypassSlots.map(slot => (
         <KeepAlive
-          key={`bypass-${bypassExiting.seq}`}
-          uniqueKey={`${scopeId}::bypass::${bypassExiting.key}#${bypassExiting.seq}`}
-          active={false}
+          key={`bypass-${slot.seq}`}
+          uniqueKey={makeAliveKey(scopeId, 'bypass', slot.key, slot.seq)}
+          active={slot === bypassCurrent}
           transition={options.transition}
           direction={navigationDirection}
-          onExited={onBypassExited}
+          onExited={slot === bypassExiting
+            ? onBypassExited
+            : undefined}
         >
-          { bypassExiting.element }
+          { slot.element }
         </KeepAlive>
-      ) }
-      { transitionEnabled && bypassCurrent && (
-        <KeepAlive
-          key={`bypass-${bypassCurrent.seq}`}
-          uniqueKey={`${scopeId}::bypass::${bypassCurrent.key}#${bypassCurrent.seq}`}
-          active
-          transition={options.transition}
-          direction={navigationDirection}
-        >
-          { bypassCurrent.element }
-        </KeepAlive>
-      ) }
+      )) }
     </KeepAliveProvider>
   )
 

@@ -163,6 +163,20 @@ describe('useDelayedActive', () => {
     vi.unstubAllGlobals()
   })
 
+  it('挂载即失活（active=false 初挂）：直接落在 exited，不走退场窗口、不假触发 onExited', () => {
+    const onExited = vi.fn()
+    const transition: RouteTransitionOptions = { exitTimeout: 300 }
+    const { result } = renderHook(() => useDelayedActive(false, transition, onExited))
+
+    expect(result.current.phase).toBe('exited')
+    expect(result.current.effectiveActive).toBe(false)
+
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(onExited).not.toHaveBeenCalled()
+  })
+
   it('未传 direction 时默认为 replace', () => {
     const { result } = renderHook(() => useDelayedActive(true))
     expect(result.current.direction).toBe('replace')

@@ -4,6 +4,31 @@
 
 [中文 README](./README.md) | [English README](./README.en.md)
 
+## [Unreleased]
+
+路由过渡动画系统与导航方向感知，及其一轮审查修复。含一处 Breaking（移除 `useNavigation`）
+
+### 新增
+
+- **路由过渡动画**：`RouterOptions.transition` + `useRouteTransition()`——`entering / entered / exiting / exited` 四阶段状态机，`finishEnter` / `finishExit` 手动确认或超时兜底；与 keep-alive 缓存完全独立（未缓存路由同样有退场窗口），默认遵循 `prefers-reduced-motion`，不配置则零行为差异
+- **导航方向感知**：`Router.navigationDirection` 与 `RouteTransitionState.direction`（`forward / back / replace`）——基于 `history.state` 位点打点推导，浏览器原生前进 / 后退可感知；方向在 active 切换瞬间快照，动画中途不受后续导航影响
+- `history.state` 上新增 `__routerPos` 位点键（公共暴露面），导出 `NAV_POSITION_KEY` / `RouterHistoryState` 供使用方合并保留
+
+### 修复
+
+- **位点随 URL 原子写入**（`URLAdapter` 增加 state 载荷）：修复 popstate 流程 / hash 回声用 `replaceState(null)` 抹掉位点、导致被 pop 过的条目再次往返时方向大面积退化为 `replace` 的缺陷（真实 Chromium 中 hash 模式后退 / 前进方向曾整体失效）
+- **transition 开启后根层 404 空白**：`notFoundComponent` 此前没有任何渲染路径，现经 bypass 槽位渲染
+- **中间件 `next(path)` 字符串重定向**：重定向即接管本次导航（短路外层），URL 不再被覆写回原目标、方向不再被外层覆盖
+- **重定向位点账本**：push 中被守卫重定向按实际历史操作递增位点（方向仍记 `replace`）；popstate 源被重定向时位点同步到浏览器恢复的条目——两者均避免相邻同位点条目把真实后退误判为回声
+- **挂载即失活的 KeepAlive** 不再假走退场窗口、误触发 `onExited`
+- PageTransition 参考实现：缓存页复活首帧不再闪现终态（`useLayoutEffect` 复位）；子元素 `transitionend` 冒泡不再误触发 `finishExit` / `finishEnter`
+
+### 变更
+
+- **Breaking**：移除 `useNavigation`——RouterProvider 旧架构残留的平行导航实现，绕过守卫 / 方向位点体系且无消费者；请使用 `useRouter()` / `useNavigate()`
+- 过渡 / 方向类型迁移至类型层（`types/transition.ts`），包入口导出不变；核心与 utils 不再反向依赖组件目录
+- Router 实例构造改用属性描述符合并，`location` / `navigationDirection` 为活 getter，新增动态字段无需在 notify 中手动同步
+
 ## [0.1.3] - 2026-06-26
 
 新增 keep-alive 可见性感知 effect。公共 API 变更（新增一个导出）

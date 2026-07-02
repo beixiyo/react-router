@@ -1,88 +1,110 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createNavigationDirectionTracker, readNavigationPosition } from './nav-direction'
+import { createNavigationDirectionTracker, NAV_POSITION_KEY, readNavigationPosition } from './nav-direction'
 
-function pos(): number | undefined {
-  return (window.history.state as { __routerPos?: number } | null)?.__routerPos
-}
+/**
+ * tracker 是纯账本：mark 按「实际历史操作」推导方向并返回应随 URL 原子写入的位点 state，
+ * 自身不写 history——写入由 URLAdapter 与 URL 同一次 pushState/replaceState 落盘
+ */
 
 describe('createNavigationDirectionTracker', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/')
   })
 
-  it('初始创建时若当前记录还没有位点，会打上位点 0', () => {
-    createNavigationDirectionTracker()
-    expect(pos()).toBe(0)
-  })
-
-  it('初始创建时若当前记录已有位点，直接复用而不清零', () => {
-    window.history.replaceState({ __routerPos: 5 }, '', '/')
+  it('初始方向为 replace；当前条目已有位点则复用不清零', () => {
+    window.history.replaceState({ [NAV_POSITION_KEY]: 5 }, '', '/')
     const tracker = createNavigationDirectionTracker()
-    expect(pos()).toBe(5)
     expect(tracker.current).toBe('replace')
+    expect(tracker.mark('push')[NAV_POSITION_KEY]).toBe(6)
   })
 
-  it('markPush：位点递增，方向记为 forward', () => {
+  it('mark(push)：位点递增、方向 forward，返回应原子写入的 state', () => {
     const tracker = createNavigationDirectionTracker()
-    tracker.markPush()
+    const stamp = tracker.mark('push')
     expect(tracker.current).toBe('forward')
-    expect(pos()).toBe(1)
+    expect(stamp).toEqual({ [NAV_POSITION_KEY]: 1 })
 
-    tracker.markPush()
-    expect(pos()).toBe(2)
+    expect(tracker.mark('push')[NAV_POSITION_KEY]).toBe(2)
   })
 
-  it('markReplace：位点不变，方向记为 replace', () => {
+  it('mark(replace)：位点不变、方向 replace', () => {
     const tracker = createNavigationDirectionTracker()
-    tracker.markPush()
-    tracker.markReplace()
+    tracker.mark('push')
+    const stamp = tracker.mark('replace')
     expect(tracker.current).toBe('replace')
-    expect(pos()).toBe(1)
+    expect(stamp[NAV_POSITION_KEY]).toBe(1)
   })
 
-  it('markPopState：传入的位点比当前小时推导为 back（模拟浏览器原生后退恢复了更早的位点）', () => {
+  it('mark({ pop })：目标位点小于当前推导为 back，账本同步、返回的位点会原样写回目标条目（不失点）', () => {
     const tracker = createNavigationDirectionTracker()
-    tracker.markPush()
-    tracker.markPush()
-    window.history.replaceState({ __routerPos: 1 }, '', '/')
-    tracker.markPopState(readNavigationPosition())
+    tracker.mark('push')
+    tracker.mark('push')
+
+    const stamp = tracker.mark({ pop: 1 })
+    expect(tracker.current).toBe('back')
+    expect(stamp[NAV_POSITION_KEY]).toBe(1)
+  })
+
+  it('mark({ pop })：back 之后 forward 再 back，方向始终正确（位点不因被 pop 过而丢失）', () => {
+    const tracker = createNavigationDirectionTracker()
+    tracker.mark('push')
+
+    tracker.mark({ pop: 0 })
+    expect(tracker.current).toBe('back')
+
+    tracker.mark({ pop: 1 })
+    expect(tracker.current).toBe('forward')
+
+    tracker.mark({ pop: 0 })
     expect(tracker.current).toBe('back')
   })
 
-  it('markPopState：传入的位点比当前大时推导为 forward（模拟浏览器原生前进）', () => {
+  it('mark({ pop: undefined })：落到未打点条目，方向兜底 replace、位点按新条目递增避免相邻同位点', () => {
     const tracker = createNavigationDirectionTracker()
-    tracker.markPush()
-    window.history.replaceState({ __routerPos: 0 }, '', '/')
-    tracker.markPopState(readNavigationPosition())
-    expect(tracker.current).toBe('back')
+    tracker.mark('push')
 
-    window.history.replaceState({ __routerPos: 1 }, '', '/')
-    tracker.markPopState(readNavigationPosition())
-    expect(tracker.current).toBe('forward')
-  })
-
-  it('markPopState：位点缺失时无法判断，兜底为 replace', () => {
-    const tracker = createNavigationDirectionTracker()
-    tracker.markPush()
-    tracker.markPopState(undefined)
+    const stamp = tracker.mark({ pop: undefined })
     expect(tracker.current).toBe('replace')
+    expect(stamp[NAV_POSITION_KEY]).toBe(2)
   })
 
-  it('markPopState：位点与当前相同时视为自身操作触发的回声事件，维持原有方向不变', () => {
-    // hash 路由下 location.hash 赋值会异步再派发一次 hashchange，此时位点还是我们自己刚打的、
-    // 与已记录 position（此刻为 1）相同——不应把 markPush 刚设好的 forward 又冲回 replace
+  it('mark({ pop: 当前位点 })：自身操作触发的回声事件，方向与位点均保持不动', () => {
+    // hash 路由下 location.hash 赋值会异步再派发一次 hashchange，此时位点是刚打的、
+    // 与账本相同——不应把 push 刚设好的 forward 冲回 replace
     const tracker = createNavigationDirectionTracker()
-    tracker.markPush()
+    tracker.mark('push')
     expect(tracker.current).toBe('forward')
 
-    tracker.markPopState(1)
+    const stamp = tracker.mark({ pop: 1 })
     expect(tracker.current).toBe('forward')
+    expect(stamp[NAV_POSITION_KEY]).toBe(1)
   })
 
-  it('readNavigationPosition：必须在 replaceURL 等覆盖 history.state 之前读取，否则拿到的是覆盖后的值', () => {
-    window.history.replaceState({ __routerPos: 3 }, '', '/')
+  it('方向覆盖：重定向实际执行 push 时位点仍递增（相邻条目不同位点），方向记 replace', () => {
+    const tracker = createNavigationDirectionTracker()
+    const stamp = tracker.mark('push', 'replace')
+    expect(tracker.current).toBe('replace')
+    expect(stamp[NAV_POSITION_KEY]).toBe(1)
+
+    // 之后从重定向页真实后退，位点 0 ≠ 1，不会被误判为回声
+    tracker.mark({ pop: 0 })
+    expect(tracker.current).toBe('back')
+  })
+
+  it('popstate 源被重定向：位点同步到浏览器恢复的条目、方向记 replace', () => {
+    const tracker = createNavigationDirectionTracker()
+    tracker.mark('push')
+    tracker.mark('push')
+
+    const stamp = tracker.mark({ pop: 1 }, 'replace')
+    expect(tracker.current).toBe('replace')
+    expect(stamp[NAV_POSITION_KEY]).toBe(1)
+  })
+
+  it('readNavigationPosition：必须在覆写 history.state 之前读取，否则拿到的是覆写后的值', () => {
+    window.history.replaceState({ [NAV_POSITION_KEY]: 3 }, '', '/')
     const captured = readNavigationPosition()
-    // 模拟紧随其后的 replaceURL 覆盖了 state（这正是生产代码里 markPopState 不自己读 state 的原因）
+
     window.history.replaceState(null, '', '/')
     expect(captured).toBe(3)
     expect(readNavigationPosition()).toBeUndefined()

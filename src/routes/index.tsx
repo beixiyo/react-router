@@ -1,6 +1,7 @@
 import type { GuardNext, NavigationGuardContext } from '../router'
 import { createHashRouter } from '../router'
 import { getUser } from '../store/auth'
+import { TRANSITION_DURATION_MS } from '../views/_shared/PageTransition'
 import { fileRoutes } from './file-routes'
 
 export const router = createHashRouter({
@@ -10,7 +11,11 @@ export const router = createHashRouter({
     // loadingComponent: () => <div>全局自定义 Loading</div>,
 
     // 路由过渡动画：与 keep-alive 缓存无关，Home/Profile（已缓存）与 Params（未缓存）都能演示
-    transition: { exitTimeout: 350, enterTimeout: 350 },
+    // 兜底超时由 CSS 过渡时长派生并留 50ms 余量——必须大于 CSS 时长，否则动画被兜底腰斩
+    transition: {
+      exitTimeout: TRANSITION_DURATION_MS + 50,
+      enterTimeout: TRANSITION_DURATION_MS + 50,
+    },
 
     // ========== 全局前置守卫 ==========
     beforeEach: async (to: NavigationGuardContext, from: NavigationGuardContext, next: GuardNext) => {

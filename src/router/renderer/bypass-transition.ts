@@ -10,7 +10,8 @@ export interface BypassSlot {
   seq: number
 }
 
-interface BypassSlots {
+/** 退场槽位集合：{@link useBypassEntry} 返回值的组成部分 */
+export interface BypassSlots {
   current: BypassSlot | null
   exiting: BypassSlot | null
 }
@@ -54,7 +55,10 @@ export function useBypassEntry(nextKey: string | null, element: ReactElement | n
   }
 
   const onExited = useCallback(() => {
-    setSlots(s => ({ ...s, exiting: null }))
+    /** 幂等：opacity/transform 等多属性会触发多次 transitionend，重复调用不产生多余提交 */
+    setSlots(s => (s.exiting === null
+      ? s
+      : { ...s, exiting: null }))
   }, [])
 
   return { ...next, onExited }

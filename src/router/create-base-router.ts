@@ -9,6 +9,7 @@ import type {
   Router,
   RouterOptions,
 } from './types'
+import type { RouterHistoryState } from './utils/nav-direction'
 import { nanoid } from 'nanoid'
 import { createRouterCacheController } from './renderer/cache-control'
 import { collectMiddlewares, compose, matchRoutes, normalizePathStartSlash, parseHash, parseQuery, parseUrl } from './utils'
@@ -17,21 +18,35 @@ import { createNavigationDirectionTracker, readNavigationPosition } from './util
 import { createPushMethod, createReplaceMethod } from './utils/push-replace'
 import { buildUrl } from './utils/url'
 
-/** runNavigation 的触发来源，决定如何打点推导 navigationDirection */
+/** runNavigation 的触发来源 */
 type NavigationSource = 'push' | 'replace' | 'popstate'
 
 /**
+ * 一次导航的意图描述：来源、popstate 携带的位点、是否为重定向递归
+ */
+interface NavigationIntent {
+  source: NavigationSource
+  /** popstate 源在事件第一时间捕获的目标条目位点（其余来源恒为 undefined） */
+  incomingPosition?: number
+  /** 守卫 / 中间件重定向的递归导航：方向一律记 replace，不触发方向滑动 */
+  isRedirect?: boolean
+}
+
+/**
  * URL 适配器接口，用于处理不同路由模式下的 URL 操作
+ *
+ * state 参数：导航方向的位点信息，要求与 URL 在**同一次** pushState / replaceState 中
+ * 原子写入（hash 的 `location.hash =` 无法携带 state，允许紧随其后同一同步任务内补写）
  */
 export interface URLAdapter {
   /** 获取当前位置 */
   getLocation: (base: string) => LocationLike
   /** 更新 URL（push 模式） */
-  updateURL: (path: string, base: string) => void
+  updateURL: (path: string, base: string, state?: RouterHistoryState) => void
   /** 替换 URL（replace 模式） */
-  replaceURL: (path: string, base: string) => void
+  replaceURL: (path: string, base: string, state?: RouterHistoryState) => void
   /** 在中间件中重定向时更新 URL */
-  redirectURL: (path: string, base: string, replaceHistory: boolean) => void
+  redirectURL: (path: string, base: string, replaceHistory: boolean, state?: RouterHistoryState) => void
   /** 设置事件监听器 */
   setupEventListener: (callback: () => void | Promise<void>) => () => void
   /** 初始化逻辑（可选） */
@@ -63,19 +78,7 @@ export interface BaseRouterInstance extends Router {
 /**
  * 创建基础路由器
  */
-export function createBaseRouter<T extends BaseRouterInstance>(
-  config: BaseRouterConfig,
-  createRouterInstance: (params: {
-    id: string
-    routes: RouteObject[]
-    options: RouterOptions
-    base: string
-    getLocation: () => LocationLike
-    subscribe: (listener: (location: LocationLike) => void) => () => void
-    navigationAdapter: Router
-    dispose: () => void
-  }) => T,
-): T {
+export function createBaseRouter(config: BaseRouterConfig): BaseRouterInstance {
   const routes = config.routes
   const options: RouterOptions = config.options ?? {}
   const base = options.base ?? ''
@@ -101,13 +104,6 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     if (disposed)
       return
     currentLocation = getLocation()
-    router.location = currentLocation
-    /**
-     * router 由 `{ ...navigationAdapter }` 展开构造（见 create-hash/browser-router.ts），
-     * navigationAdapter 上的 getter 在展开那一刻就被求值成了静态值，之后不会再变——
-     * 必须像 location 一样，每次 notify 时手动同步，否则 navigationDirection 永远停在初始值
-     */
-    router.navigationDirection = directionTracker.current
     subscribers.forEach((listener) => {
       try {
         listener(currentLocation)
@@ -149,9 +145,21 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     }
   }
 
-  const runNavigation = async (path: string, replaceHistory: boolean, navSource: NavigationSource = replaceHistory
-    ? 'replace'
-    : 'push', incomingPosition?: number): Promise<void> => {
+  const runNavigation = async (path: string, replaceHistory: boolean, intent?: NavigationIntent): Promise<void> => {
+    const source: NavigationSource = intent?.source ?? (replaceHistory
+      ? 'replace'
+      : 'push')
+
+    /**
+     * 守卫 / 中间件重定向的统一入口：方向一律记 replace（无「栈方向」语义，如未登录跳转登录页），
+     * source 与 incomingPosition 原样透传——popstate 源被重定向时位点账本仍需与真实历史栈同步
+     */
+    const redirectTo = (p: string) => runNavigation(p, replaceHistory, {
+      source,
+      incomingPosition: intent?.incomingPosition,
+      isRedirect: true,
+    })
+
     const target = normalizePathStartSlash(path)
     const from = currentLocation
     const to = parseUrl(target)
@@ -162,8 +170,7 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     const beforeEachResult = await guardManager.runBeforeEach(toContext, fromContext)
     if (!beforeEachResult.shouldContinue) {
       if (beforeEachResult.redirectPath) {
-        /** 守卫重定向无「栈方向」语义（如未登录跳转登录页），统一记为 replace，不触发方向滑动 */
-        await runNavigation(beforeEachResult.redirectPath, replaceHistory, 'replace')
+        await redirectTo(beforeEachResult.redirectPath)
       }
       return
     }
@@ -184,8 +191,10 @@ export function createBaseRouter<T extends BaseRouterInstance>(
       meta: finalMatch.match?.route.meta,
       state: {},
       redirect: (p: string) => {
-        urlAdapter.redirectURL(normalizePathStartSlash(p), base, replaceHistory)
-        directionTracker.markReplace()
+        const stamp = directionTracker.mark(replaceHistory
+          ? 'replace'
+          : 'push', 'replace')
+        urlAdapter.redirectURL(normalizePathStartSlash(p), base, replaceHistory, stamp)
         notify()
       },
     }
@@ -200,8 +209,12 @@ export function createBaseRouter<T extends BaseRouterInstance>(
           return
         }
         if (typeof p === 'string') {
-          /** 中间件重定向同样无「栈方向」语义，统一记为 replace */
-          runNavigation(p, replaceHistory, 'replace').then(resolve).catch(reject)
+          /**
+           * 字符串重定向即接管本次导航：必须短路外层，
+           * 否则外层会继续 beforeResolve、把 URL 覆写回原目标、并覆盖方向标记
+           */
+          middlewareCancelled = true
+          redirectTo(p).then(resolve).catch(reject)
           return
         }
         resolve()
@@ -214,7 +227,7 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     const beforeResolveResult = await guardManager.runBeforeResolve(finalToContext, fromContext)
     if (!beforeResolveResult.shouldContinue) {
       if (beforeResolveResult.redirectPath) {
-        await runNavigation(beforeResolveResult.redirectPath, replaceHistory, 'replace')
+        await redirectTo(beforeResolveResult.redirectPath)
       }
       return
     }
@@ -226,19 +239,28 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     const resolvedMatch = matchRoute(resolvedTo.pathname)
     const resolvedToContext = buildGuardContext(resolvedTo, resolvedMatch.match, from)
 
+    /**
+     * 先按「实际历史操作」结账（popstate 同步位点 / push 递增 / replace 不变），
+     * 拿到应写入的位点 state，再与 URL 一并原子写入；
+     * 重定向递归通过 override 把方向修正为 replace，但位点仍跟随真实操作
+     */
+    const stamp = directionTracker.mark(
+      source === 'popstate'
+        ? { pop: intent?.incomingPosition }
+        : replaceHistory
+          ? 'replace'
+          : 'push',
+      intent?.isRedirect
+        ? 'replace'
+        : undefined,
+    )
+
     if (replaceHistory) {
-      urlAdapter.replaceURL(resolvedTarget, base)
+      urlAdapter.replaceURL(resolvedTarget, base, stamp)
     }
     else {
-      urlAdapter.updateURL(resolvedTarget, base)
+      urlAdapter.updateURL(resolvedTarget, base, stamp)
     }
-
-    if (navSource === 'popstate')
-      directionTracker.markPopState(incomingPosition)
-    else if (navSource === 'push')
-      directionTracker.markPush()
-    else
-      directionTracker.markReplace()
 
     notify()
 
@@ -250,14 +272,14 @@ export function createBaseRouter<T extends BaseRouterInstance>(
       return
     /**
      * 必须在任何 URL / history.state 变更之前读取：popstate 触发的瞬间，
-     * history.state 就是浏览器已经恢复好的目标条目状态；一旦下面走到 replaceURL
-     * （会整体覆盖 state），这个位点就再也读不回来了
+     * history.state 就是浏览器已经恢复好的目标条目状态；
+     * 后续 replaceURL 会用新 state 覆写当前条目，届时再读为时已晚
      */
     const incomingPosition = readNavigationPosition()
     const loc = getLocation()
     const target = loc.pathname + loc.search + loc.hash
     try {
-      await runNavigation(target, true, 'popstate', incomingPosition)
+      await runNavigation(target, true, { source: 'popstate', incomingPosition })
     }
     catch (error) {
       console.error('[Router] Location change navigation error:', error)
@@ -308,23 +330,29 @@ export function createBaseRouter<T extends BaseRouterInstance>(
     },
   }
 
-  const router = createRouterInstance({
-    id: nanoid(),
-    routes,
-    options,
-    base,
-    getLocation: () => currentLocation,
-    subscribe: navigationAdapter.subscribe,
-    navigationAdapter,
-    dispose: () => {
-      if (disposed)
-        return
-      disposed = true
-      removeEventListener()
-      subscribers.clear()
-      guardManager.clear()
+  /**
+   * 用属性描述符合并而非展开：navigationAdapter 上 location / navigationDirection
+   * 是「活的 getter」，spread 会在展开那一刻把它们求值成静态值、此后永不更新——
+   * 保留 getter 后无需在 notify 里逐字段手动同步
+   */
+  const router = Object.defineProperties(
+    {
+      id: nanoid(),
+      routes,
+      options,
+      base,
+      getLocation: () => currentLocation,
+      dispose: () => {
+        if (disposed)
+          return
+        disposed = true
+        removeEventListener()
+        subscribers.clear()
+        guardManager.clear()
+      },
     },
-  })
+    Object.getOwnPropertyDescriptors(navigationAdapter),
+  ) as BaseRouterInstance
 
   /** 在创建 router 实例后，绑定 push 和 replace 方法 */
   router.push = createPushMethod(router, router)
