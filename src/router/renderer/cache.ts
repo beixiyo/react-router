@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import type { LocationLike, RouterOptions } from '../types'
+import type { RouteTransitionOptions } from '../types/transition'
 import { useMemo, useRef } from 'react'
 import { DEFAULT_CACHE_LIMIT } from '../constants'
 import { getCacheConfig, shouldCacheForPath, shouldEnableCache } from '../utils/cache-config'
@@ -15,6 +16,11 @@ export interface CacheEntry {
    * 上层据此变更 React key 让其原地重新挂载（状态重置），而非沿用旧实例
    */
   seq?: number
+  /**
+   * 本条目生效的过渡配置（路由级与全局合并后的结果），随条目存储——
+   * 退场中的旧条目用自己的配置播完动画，不受新路由配置影响
+   */
+  transition?: RouteTransitionOptions
 }
 
 export type CacheMap = LRUCache<string, CacheEntry>
@@ -84,6 +90,7 @@ export function updateCache(
   element: ReactElement,
   location: LocationLike,
   effectiveLimit?: number,
+  transition?: RouteTransitionOptions,
 ) {
   if (effectiveLimit === undefined)
     return
@@ -103,6 +110,7 @@ export function updateCache(
       lastShown: Date.now(),
       location: { ...location },
       seq: entrySeq++,
+      transition,
     })
   }
 }
@@ -119,6 +127,7 @@ export function setShellEntry(
   cacheKey: string,
   element: ReactElement,
   location: LocationLike,
+  transition?: RouteTransitionOptions,
 ) {
   const prev = shellCache.get(cacheKey)
   shellCache.set(cacheKey, {
@@ -127,6 +136,7 @@ export function setShellEntry(
     lastShown: Date.now(),
     location: { ...location },
     seq: prev?.seq ?? entrySeq++,
+    transition,
   })
 }
 

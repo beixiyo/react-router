@@ -9,6 +9,7 @@ import { getCachedElement, setShellEntry, updateCache, useCacheConfig, useCacheM
 import { isCacheKeyMatched } from '../renderer/cache-control'
 import { createRouteElement, emptyElement } from '../renderer/route-matcher'
 import { matchLayout, matchRoutes } from '../utils'
+import { resolveTransition, routesHaveTransition } from '../utils/transition-config'
 import { KeepAlive, KeepAliveProvider } from './KeepAlive'
 
 /**
@@ -199,6 +200,16 @@ export function KeepAliveOutlet({
   }, [match, location.pathname, location.search, location.hash, options.routeConfig, options.notFoundComponent, isRoot, generation])
 
   /**
+   * 本层当前路由实际生效的过渡配置：路由级（就近）与全局字段级合并，
+   * 随缓存条目 / bypass 槽位存储——退场中的旧条目用自己的配置播完动画
+   */
+  const levelTransition = match
+    ? resolveTransition(isShell
+        ? getMatchHead(match)
+        : match.route, options)
+    : options.transition
+
+  /**
    * 渲染期同步缓存（幂等）：把当前层要保活的元素写入对应缓存
    * 放在渲染体而非 useMemo —— 避免 memo 命中 bail-out 时缓存不被回填（白屏根因）
    */
@@ -213,13 +224,13 @@ export function KeepAliveOutlet({
         search: location.search,
         hash: location.hash,
       }
-      setShellEntry(shellCache, levelKey, liveElement, shellLocation)
+      setShellEntry(shellCache, levelKey, liveElement, shellLocation, levelTransition)
       currentInCache = true
     }
     else if (eligible) {
       // 叶子：插入即冻结（保留状态），命中则仅刷新顺序 / location
       if (!leafCache.has(levelKey))
-        updateCache(leafCache, levelKey, liveElement, location, effectiveLimit)
+        updateCache(leafCache, levelKey, liveElement, location, effectiveLimit, levelTransition)
       else
         getCachedElement(leafCache, levelKey, location)
       currentInCache = true
@@ -239,13 +250,17 @@ export function KeepAliveOutlet({
     : [...leafCache.values()]
 
   /**
-   * 未缓存路由的退场窗口：仅在配置了 options.transition 时启用，
-   * 否则维持原有裸渲染（!currentInCache && liveElement），零行为差异
+   * 未缓存路由的退场窗口：全局或任一路由配置了过渡即启用（某路由 `transition: false`
+   * 只关闭自己的动画，离开「有过渡的路由」仍需要退场槽位就位）；
+   * 全部未配置时维持原有裸渲染（!currentInCache && liveElement），零行为差异
    *
    * 根层无匹配（404）同样走 bypass 展示 NotFound——旧的裸渲染分支在启用过渡后被关闭，
    * 若不给 404 槽位，notFoundComponent 将没有任何渲染路径（空白页）
    */
-  const transitionEnabled = Boolean(options.transition)
+  const transitionEnabled = useMemo(
+    () => Boolean(options.transition) || routesHaveTransition(candidates),
+    [options.transition, candidates],
+  )
   const bypassKey = !transitionEnabled || currentInCache
     ? null
     : (match && levelKey !== undefined)
@@ -255,7 +270,7 @@ export function KeepAliveOutlet({
         : (!match && isRoot)
             ? '__notfound__'
             : null
-  const { current: bypassCurrent, exiting: bypassExiting, onExited: onBypassExited } = useBypassEntry(bypassKey, liveElement)
+  const { current: bypassCurrent, exiting: bypassExiting, onExited: onBypassExited } = useBypassEntry(bypassKey, liveElement, levelTransition)
 
   /** 当前导航方向快照，随 router 通知同一渲染批次更新，透传给每个 KeepAlive 供其在 active 切换瞬间捕获 */
   const navigationDirection = router?.navigationDirection
@@ -265,7 +280,7 @@ export function KeepAliveOutlet({
       <KeepAlive
         uniqueKey={makeAliveKey(scopeId, kind, item.key, item.seq ?? 0)}
         active={active}
-        transition={options.transition}
+        transition={item.transition}
         direction={navigationDirection}
       >
         { item.element }
@@ -291,7 +306,7 @@ export function KeepAliveOutlet({
           key={`bypass-${slot.seq}`}
           uniqueKey={makeAliveKey(scopeId, 'bypass', slot.key, slot.seq)}
           active={slot === bypassCurrent}
-          transition={options.transition}
+          transition={slot.transition}
           direction={navigationDirection}
           onExited={slot === bypassExiting
             ? onBypassExited

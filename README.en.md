@@ -24,6 +24,7 @@ A React router inspired by Vue Router. It provides Vue Router-style guards, Koa-
 | Koa-style middleware | ✅ Route `middlewares`, `(ctx, next)` | ✅ `middleware` / `clientMiddleware` | ⚠️ `beforeLoad` + loader lifecycle |
 | Built-in component keep-alive / LRU page cache | ✅ Component-instance LRU keep-alive | ❌ No built-in component keep-alive | ⚠️ Loader / SWR data cache, not component keep-alive |
 | Global `layouts` | ✅ Central pathname-matching config | ⚠️ Nested routes / layout routes | ⚠️ Layout / pathless layout routes |
+| Route transitions + forward/back direction awareness | ✅ Headless 4-phase state machine + `direction`, aware of native browser back/forward | ⚠️ View Transitions API (no stack-direction semantics) | ⚠️ Bring your own animation library |
 
 ## 📦 Installation
 
@@ -86,6 +87,11 @@ createBrowserRouter({
     loadingComponent?: ReactElement | ComponentType,
     notFoundComponent?: ReactElement | ComponentType,
     layouts?: LayoutConfig[],            // global layouts
+    transition?: {                       // route transitions; omit to disable entirely (zero behavior change)
+      enterTimeout?: number,             // enter fallback timeout (ms) @default 500
+      exitTimeout?: number,              // exit fallback timeout (ms) @default 500
+      respectReducedMotion?: boolean,    // respect prefers-reduced-motion @default true
+    },
     beforeEach?: NavigationGuard,
     beforeResolve?: NavigationGuard,
     afterEach?: AfterEachGuard,
@@ -129,6 +135,7 @@ router.afterEach((ctx) => {
 | `middlewares` | Koa-style `(ctx, next)` handlers |
 | `loadingComponent` | Route-level lazy fallback, higher priority than the global one |
 | `layoutComponent` | Route-level layout wrapping the current route |
+| `transition` | Route-level transitions: field-level merge over the global config (route wins); `false` disables for this route |
 
 ### Global `layouts`
 
@@ -167,6 +174,157 @@ options: {
 }
 ```
 
+## 🎬 Route Transitions
+
+Headless by design: the library only provides the **phase state machine and direction signal**, without bundling any animation library — consume it with plain CSS, motion/react, or anything else. Fully independent from the keep-alive cache; uncached routes get an exit window too
+
+```ts
+// enable globally
+options: {
+  transition: { enterTimeout: 350, exitTimeout: 350 },
+}
+
+// per-route granularity: field-level merge over the global config (route fields win)
+routes: [
+  { path: '/heavy', component: Heavy, transition: { exitTimeout: 800 } }, // override exit timeout
+  { path: '/instant', component: Instant, transition: false },           // disable for this route only
+  { path: '/only-me', component: OnlyMe, transition: { enterTimeout: 350 } }, // enable a single route without a global config
+]
+```
+
+Once enabled, route switches go through a controlled transition window instead of taking effect immediately. **An exiting page finishes its animation with its own config**, unaffected by the target route's config. Read the state inside pages via `useRouteTransition()`:
+
+| Field | Description |
+|-------|-------------|
+| `phase` | `entering` → `entered` (stable) → `exiting` → `exited` (exit complete) |
+| `direction` | Direction of this switch: `forward` (push / browser forward), `back` (browser back / `navigate(-1)`), `replace` (explicit replace / guard redirect) |
+| `finishEnter()` | Manually confirm the enter animation finished; falls back to `enterTimeout` otherwise |
+| `finishExit()` | Manually confirm the exit animation finished; falls back to `exitTimeout` otherwise |
+
+`direction` is snapshotted at the moment of the switch, so a later navigation never mutates an in-flight animation. It is derived from position stamps in `history.state`, so **native browser back/forward buttons are recognized as well**
+
+### Full example: direction-aware sliding transition
+
+Use `useRouteTransitionBindings()` — it moves the three easy-to-get-wrong details into the library (enter double-frame pacing, filtering `transitionend` bubbled from children, auto-calling finish on animation end). **You only write styles** and spread `bind` onto the animated element:
+
+```tsx
+import { useRouteTransitionBindings } from '@jl-org/react-router'
+
+const DURATION = 300 // must stay below enterTimeout / exitTimeout, or the fallback cuts the animation short
+
+export function PageTransition({ children }: { children: React.ReactNode }) {
+  const { isEntering, isExiting, direction, bind } = useRouteTransitionBindings()
+
+  /** forward / back slide horizontally; replace has no stack-direction semantics, fall back to a vertical fade */
+  const axis = direction === 'replace'
+    ? 'Y'
+    : 'X'
+  const enterOffset = direction === 'back'
+    ? -12
+    : 12
+
+  return (
+    <div
+      style={{
+        transition: `all ${DURATION}ms ease-out`,
+        opacity: isExiting || isEntering
+          ? 0
+          : 1,
+        transform: isExiting
+          ? `translate${axis}(${-enterOffset}px)`
+          : isEntering
+            ? `translate${axis}(${enterOffset}px)`
+            : `translate${axis}(0)`,
+      }}
+      {...bind}
+    >
+      { children }
+    </div>
+  )
+}
+```
+
+`bind` listens for both `transitionend` and `animationend`, so CSS animations work wiring-free as well
+
+### Integrating motion/react (or other JS animation libraries)
+
+JS animation libraries don't go through DOM transition events, so `bind` isn't needed — drive `animate` with `phase` / `direction`, and call the `finishExit` / `finishEnter` primitives in the completion callback:
+
+```tsx
+import { useRouteTransition } from '@jl-org/react-router'
+import { motion } from 'motion/react'
+
+export function MotionPageTransition({ children }: { children: React.ReactNode }) {
+  const transition = useRouteTransition()
+
+  /** Transitions disabled (no global config, or route-level false): just render normally */
+  if (!transition)
+    return <>{ children }</>
+
+  const { phase, direction } = transition
+  const isExiting = phase === 'exiting'
+  // forward enters from the right and exits left; back is mirrored; replace moves vertically.
+  // Always provide both x / y so a leftover value from the previous axis never lingers
+  const enter = direction === 'back'
+    ? -24
+    : 24
+  const offset = (v: number) => (direction === 'replace'
+    ? { x: 0, y: v }
+    : { x: v, y: 0 })
+
+  return (
+    <motion.div
+      initial={phase === 'entering'
+        ? { opacity: 0, ...offset(enter) }
+        : false}
+      animate={isExiting
+        ? { opacity: 0, ...offset(-enter) }
+        : { opacity: 1, x: 0, y: 0 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      onAnimationComplete={() => {
+        if (transition.phase === 'exiting')
+          transition.finishExit()
+        else if (transition.phase === 'entering')
+          transition.finishEnter()
+      }}
+    >
+      { children }
+    </motion.div>
+  )
+}
+```
+
+Key points: only pass `initial` while `phase === 'entering'` (don't replay the enter animation in the stable `entered` state); the animation duration must stay below the fallback timeouts. A complete runnable version lives in the demo at [`MotionPageTransition`](./src/views/_shared/MotionPageTransition.tsx) (used by the `/push-replace` route, while the rest use the CSS version — compare the feel)
+
+### Recommended: inject once at the route-config layer
+
+Zero intrusion into page components; new pages get transitions automatically and none can be missed:
+
+```tsx
+const withPageTransition = (Component: ComponentType<any>) => (props: any) => (
+  <PageTransition>
+    <Component {...props} />
+  </PageTransition>
+)
+
+const router = createBrowserRouter({
+  routes: [
+    { path: '/', component: withPageTransition(Home) },
+    { path: '/dashboard', component: withPageTransition(lazy(() => import('./views/dashboard'))) },
+  ],
+  options: {
+    transition: { enterTimeout: 350, exitTimeout: 350 },
+  },
+})
+```
+
+### Notes
+
+- Under a global `transition`, pages that never consume the transition state won't break, but each switch waits out the fallback timeout — either inject the wrapper uniformly, or set `transition: false` on that route
+- Everything degrades to instant switching when `prefers-reduced-motion: reduce` matches (respected by default) or `transition` is not configured
+- With transitions disabled (including route-level `false`), `useRouteTransition()` returns `null` and `useRouteTransitionBindings()` returns harmless no-op bindings — the same component needs no conditional branches
+- Direction inference writes a position field onto each history entry's `history.state` (key name exported as `NAV_POSITION_KEY`); spread-merge to preserve it if you write `history.state` yourself
+
 ## 🧭 Router API
 
 | Method | Description |
@@ -175,6 +333,7 @@ options: {
 | `router.replace(path)` | Replaces the current entry |
 | `router.back()` | Calls `history.back()` |
 | `router.getLocation()` | Current `LocationLike` |
+| `router.navigationDirection` | Direction of the latest navigation: `forward` / `back` / `replace` |
 | `router.beforeEach/beforeResolve/afterEach(handler)` | Guard registration |
 | `router.clearCache()` | Clears all keep-alive page caches |
 | `router.deleteCache(matcher)` | Deletes matching keep-alive cache keys; supports string / RegExp / function |
@@ -194,6 +353,8 @@ options: {
 | `useLocation({ scope: 'cache' })` | `pathname`, `search`, and `hash` of the current keep-alive cache entry |
 | `useParams()` | `{ params, query, hash }` |
 | `useRouteKeepAliveEffect(effect)` | Visibility-aware `useEffect` for keep-alive cached pages: runs `effect` on activate, runs its cleanup on **deactivate (hidden by cache) / unmount** |
+| `useRouteTransition()` | Current route transition state `{ phase, direction, finishEnter, finishExit }`; `null` when transitions are disabled |
+| `useRouteTransitionBindings()` | Batteries-included wrapper: `{ isEntering, isExiting, direction, bind }`; spreading `{...bind}` onto the animated element completes the wiring |
 
 ### `useRouteKeepAliveEffect`
 

@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import type { RouteTransitionOptions } from '../types/transition'
 import { useCallback, useRef, useState } from 'react'
 
 /**
@@ -8,6 +9,8 @@ export interface BypassSlot {
   key: string
   element: ReactElement
   seq: number
+  /** 本槽位生效的过渡配置——退场中的旧槽位用自己的配置播完动画 */
+  transition?: RouteTransitionOptions
 }
 
 /** 退场槽位集合：{@link useBypassEntry} 返回值的组成部分 */
@@ -28,8 +31,13 @@ export interface BypassSlots {
  *
  * @param nextKey 本次渲染应展示的身份；`null` 表示当前无需 bypass 展示（走缓存或无匹配）
  * @param element 对应身份的元素；`nextKey` 非空时必传
+ * @param transition 当前身份生效的过渡配置，随槽位存储
  */
-export function useBypassEntry(nextKey: string | null, element: ReactElement | null): BypassSlots & { onExited: () => void } {
+export function useBypassEntry(
+  nextKey: string | null,
+  element: ReactElement | null,
+  transition?: RouteTransitionOptions,
+): BypassSlots & { onExited: () => void } {
   const seqRef = useRef(0)
   const [slots, setSlots] = useState<BypassSlots>({ current: null, exiting: null })
 
@@ -41,13 +49,13 @@ export function useBypassEntry(nextKey: string | null, element: ReactElement | n
   }
   else if (slots.current?.key !== nextKey) {
     next = {
-      current: { key: nextKey, element: element as ReactElement, seq: ++seqRef.current },
+      current: { key: nextKey, element: element as ReactElement, seq: ++seqRef.current, transition },
       // 打断即顶掉仍在退场中的旧槽位：同一时刻只保留一个退场位，旧的直接失去继续挂载的机会
       exiting: slots.current,
     }
   }
   else if (slots.current.element !== element) {
-    next = { ...slots, current: { ...slots.current, element: element as ReactElement } }
+    next = { ...slots, current: { ...slots.current, element: element as ReactElement, transition } }
   }
 
   if (next !== slots) {

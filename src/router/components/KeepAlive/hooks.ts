@@ -1,5 +1,6 @@
-import type { KeepAliveContextType, KeepAliveEffectCallback, RouteTransitionState } from './type'
-import { useContext, useEffect, useRef } from 'react'
+import type { SyntheticEvent } from 'react'
+import type { KeepAliveContextType, KeepAliveEffectCallback, NavigationDirection, RouteTransitionState } from './type'
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { KeepAliveContext, KeepAliveKeyContext, RouteTransitionContext } from './context'
 
 /**
@@ -122,4 +123,103 @@ export function useRouteKeepAliveEffect(effect: KeepAliveEffectCallback): void {
  */
 export function useRouteTransition(): RouteTransitionState | null {
   return useContext(RouteTransitionContext)
+}
+
+/**
+ * {@link useRouteTransitionBindings} 的返回值
+ */
+export interface RouteTransitionBindings {
+  /** 原始过渡状态；未开启过渡（或未被 KeepAlive 包裹）时为 `null` */
+  transition: RouteTransitionState | null
+  /** 本次切换的导航方向，未开启过渡时兜底 `replace` */
+  direction: NavigationDirection
+  /** 进场首帧（应渲染为「进场起始态」：隐藏 / 偏移）；下一帧自动翻转，CSS transition 由此被触发 */
+  isEntering: boolean
+  /** 退场中（应渲染为「退场终态」） */
+  isExiting: boolean
+  /**
+   * 展开到执行动画的元素上（`{...bind}`）：
+   * 动画结束自动通知路由完成过渡，内置 target 过滤（忽略子元素冒泡上来的 transitionend / animationend）
+   * 与 phase 分发（exiting → finishExit、entering → finishEnter），无需手动接线
+   *
+   * 引用全程恒定，可安全传入 memo 组件 / deps 数组
+   */
+  bind: {
+    onTransitionEnd: (e: SyntheticEvent) => void
+    onAnimationEnd: (e: SyntheticEvent) => void
+  }
+}
+
+/**
+ * {@link useRouteTransition} 的开箱即用封装：样式仍完全由使用方决定（headless），
+ * 但把消费过渡状态的三个易错细节收进库里——
+ *
+ * 1. **进场双帧节奏**：先以起始态提交一帧、下一帧再翻转（`useLayoutEffect` 在 paint 前复位，
+ *    缓存页复活时不会闪现终态），否则 CSS transition 捕捉不到属性变化
+ * 2. **transitionend 冒泡过滤**：子元素（如 hover 变色）的事件不会误判为页面动画完成
+ * 3. **phase 分发**：动画结束自动调用对应的 finishExit / finishEnter
+ *
+ * 用 JS 动画库（motion/react 等）需要精确控制时，仍可用 {@link useRouteTransition}
+ * 的 `finishEnter` / `finishExit` 原语手动接线
+ *
+ * @example
+ * const { isEntering, isExiting, direction, bind } = useRouteTransitionBindings()
+ * return (
+ *   <div
+ *     style={{
+ *       transition: 'all 300ms ease-out',
+ *       opacity: isEntering || isExiting ? 0 : 1,
+ *     }}
+ *     {...bind}
+ *   >
+ *     { children }
+ *   </div>
+ * )
+ */
+export function useRouteTransitionBindings(): RouteTransitionBindings {
+  const transition = useRouteTransition()
+  const [revealed, setRevealed] = useState(false)
+  const phase = transition?.phase
+
+  useLayoutEffect(() => {
+    if (phase !== 'entering')
+      return
+
+    setRevealed(false)
+    const raf = requestAnimationFrame(() => setRevealed(true))
+    return () => cancelAnimationFrame(raf)
+  }, [phase])
+
+  /**
+   * latest-ref：让 handleEnd / bind 引用全程恒定——
+   * 库返回值会进入使用方的 memo 组件 props 与 deps 数组，不稳定的引用会击穿它们的缓存
+   */
+  const transitionRef = useRef(transition)
+  transitionRef.current = transition
+  const revealedRef = useRef(revealed)
+  revealedRef.current = revealed
+
+  const handleEnd = useCallback((e: SyntheticEvent) => {
+    if (e.target !== e.currentTarget)
+      return
+
+    const current = transitionRef.current
+    if (current?.phase === 'exiting')
+      current.finishExit()
+    else if (current?.phase === 'entering' && revealedRef.current)
+      current.finishEnter()
+  }, [])
+
+  const bind = useMemo(() => ({
+    onTransitionEnd: handleEnd,
+    onAnimationEnd: handleEnd,
+  }), [handleEnd])
+
+  return useMemo(() => ({
+    transition,
+    direction: transition?.direction ?? 'replace',
+    isEntering: phase === 'entering' && !revealed,
+    isExiting: phase === 'exiting',
+    bind,
+  }), [transition, phase, revealed, bind])
 }

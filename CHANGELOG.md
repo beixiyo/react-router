@@ -11,6 +11,8 @@
 ### 新增
 
 - **路由过渡动画**：`RouterOptions.transition` + `useRouteTransition()`——`entering / entered / exiting / exited` 四阶段状态机，`finishEnter` / `finishExit` 手动确认或超时兜底；与 keep-alive 缓存完全独立（未缓存路由同样有退场窗口），默认遵循 `prefers-reduced-motion`，不配置则零行为差异
+- **`useRouteTransitionBindings()`**：过渡消费的开箱即用封装——进场双帧节奏、子元素 `transitionend` / `animationend` 冒泡过滤、动画结束自动回调 finish 均收进库里，使用方 `{...bind}` 展开即完成接线、只写样式；JS 动画库场景仍可退回 `finishEnter` / `finishExit` 原语
+- **路由级过渡粒度**：`RouteObject.transition`——与全局配置字段级合并（路由字段优先）、`false` 单独关闭该路由过渡、全局未配置时也可单路由开启；配置随缓存条目 / 退场槽位存储，退场中的页面用自己的配置播完动画
 - **导航方向感知**：`Router.navigationDirection` 与 `RouteTransitionState.direction`（`forward / back / replace`）——基于 `history.state` 位点打点推导，浏览器原生前进 / 后退可感知；方向在 active 切换瞬间快照，动画中途不受后续导航影响
 - `history.state` 上新增 `__routerPos` 位点键（公共暴露面），导出 `NAV_POSITION_KEY` / `RouterHistoryState` 供使用方合并保留
 

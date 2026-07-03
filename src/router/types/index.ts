@@ -59,6 +59,12 @@ export interface RouteObject {
   loadingComponent?: ReactElement | ComponentType<any>
   /** 布局组件：用于包裹当前路由组件的外层容器 */
   layoutComponent?: ReactElement | ComponentType<any>
+  /**
+   * 路由级过渡配置：与全局 `RouterOptions.transition` 字段级合并（路由字段优先）；
+   * 传 `false` 关闭本路由的过渡（其余路由不受影响）
+   * @default undefined 沿用全局配置
+   */
+  transition?: RouteTransitionOptions | false
 }
 
 /**

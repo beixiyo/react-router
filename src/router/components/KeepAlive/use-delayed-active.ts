@@ -81,6 +81,12 @@ export function useDelayedActive(
       setPhase(active
         ? 'entered'
         : 'exited')
+      /**
+       * 立即切换语义下，失活即「退场瞬时完成」：同样要通知 onExited，
+       * 否则上层的临时退场槽位（bypass）在 reduced-motion / 路由级关闭过渡时无法回收
+       */
+      if (!active && activeChanged)
+        onExitedRef.current?.()
       return
     }
 

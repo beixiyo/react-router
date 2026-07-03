@@ -7,6 +7,7 @@ import { genRoutes } from '@jl-org/vite-auto-route'
 import { lazy } from 'react'
 import { getUser } from '../store/auth'
 import Home from '../views'
+import { MotionPageTransition } from '../views/_shared/MotionPageTransition'
 import { PageTransition } from '../views/_shared/PageTransition'
 import { createAuthMiddleware } from './middlewares'
 
@@ -15,18 +16,23 @@ const requireLogin = createAuthMiddleware(() => !!getUser(), '/login')
 const requireAdmin = createAuthMiddleware(() => getUser()?.role === 'admin', '/403')
 
 /**
- * 路由级统一注入过渡动画：所有页面（含懒加载）都在此处包一层 PageTransition，
+ * 路由级统一注入过渡动画：所有页面（含懒加载）都在此处包一层过渡组件，
  * 页面组件零侵入，新增页面自动获得过渡，无需（也不要）在页面内手动包裹
  */
-function withPageTransition(Component: ComponentType<any>): ComponentType<any> {
-  return function PageWithTransition(props: any) {
-    return (
-      <PageTransition>
-        <Component {...props} />
-      </PageTransition>
-    )
+function wrapWith(Wrapper: ComponentType<{ children: React.ReactNode }>) {
+  return function withTransition(Component: ComponentType<any>): ComponentType<any> {
+    return function PageWithTransition(props: any) {
+      return (
+        <Wrapper>
+          <Component {...props} />
+        </Wrapper>
+      )
+    }
   }
 }
+
+const withPageTransition = wrapWith(PageTransition)
+const withMotionPageTransition = wrapWith(MotionPageTransition)
 
 export const fileRoutes: RouteObject[] = [
   {
@@ -53,11 +59,21 @@ export const fileRoutes: RouteObject[] = [
             route.loadingComponent = () => <div>profile 自定义 Loading...</div>
           }
 
+          // 路由级过渡控制演示：/lazy 单独关闭过渡（切入切出无动画），其余沿用全局配置
+          if (route.path === '/lazy') {
+            route.transition = false
+          }
+
+          // motion/react 接入演示：/push-replace 用 MotionPageTransition，其余为 CSS 版
+          const wrap = route.path === '/push-replace'
+            ? withMotionPageTransition
+            : withPageTransition
+
           // 对于非根路径的路由，使用懒加载
           if (route.path !== '/') {
             return {
               ...route,
-              component: withPageTransition(lazy(route.component)),
+              component: wrap(lazy(route.component)),
             }
           }
 

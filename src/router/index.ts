@@ -5,7 +5,8 @@
  */
 
 // keep-alive 缓存页可见性感知 effect（KeepAlive 组件本身由路由内部使用，不对外导出）
-export { useRouteKeepAliveEffect, useRouteTransition } from './components/KeepAlive/hooks'
+export { useRouteKeepAliveEffect, useRouteTransition, useRouteTransitionBindings } from './components/KeepAlive/hooks'
+export type { RouteTransitionBindings } from './components/KeepAlive/hooks'
 export type { KeepAliveEffectCallback } from './components/KeepAlive/type'
 
 // 组件
