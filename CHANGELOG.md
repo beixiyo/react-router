@@ -25,6 +25,14 @@
 - **挂载即失活的 KeepAlive** 不再假走退场窗口、误触发 `onExited`
 - PageTransition 参考实现：缓存页复活首帧不再闪现终态（`useLayoutEffect` 复位）；子元素 `transitionend` 冒泡不再误触发 `finishExit` / `finishEnter`
 
+### 性能（memo / 引用稳定性专项）
+
+- **RouterCtx 直接下发稳定实例**：`useRouter` / `useNavigate` / `Link` 消费者不再随导航全量重渲染（此前每次导航 spread 出新对象，还把 location / navigationDirection 的活 getter 冻成快照）；`NavLink` 激活态改由 `useLocation` 响应式驱动。**语义变化**：`useRouter()` 不再随导航重渲染，读 `.location` 值新鲜但非响应式，响应式请用 `useLocation()`
+- **`useNavigate` 返回引用恒定**（useCallback），可安全放入 deps / memo 组件 props
+- **缓存条目 location 引用稳定化**：值比较后才换引用，活跃子树的 LocationCtx 不再被值相等的新对象击穿（此前每渲染 spread 新对象 → 子树所有 useLocation/useParams 消费者每渲染重跑 + 订阅退订重订）
+- **query-only 导航不再重建元素树**：`liveElement` 依赖移除 search/hash（元素创建链路不消费它们，查询参数经 useLocation 订阅送达）
+- 路由级 transition 合并结果锚定引用；`useLocation` 订阅只建一次；默认 cacheKey / 空 params / 空 candidates 提为模块级稳定常量
+
 ### 变更
 
 - **Breaking**：移除 `useNavigation`——RouterProvider 旧架构残留的平行导航实现，绕过守卫 / 方向位点体系且无消费者；请使用 `useRouter()` / `useNavigate()`

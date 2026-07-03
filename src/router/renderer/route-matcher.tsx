@@ -5,6 +5,12 @@ import { OutletContext, ParamsContext } from '../context'
 import { renderRouteComponent } from './route-loader'
 
 /**
+ * 无参数时的稳定空对象：`?? {}` 每次产新引用会让壳子树的
+ * useParams 每导航换新返回值，用户以 params 为 deps 的 effect 空转
+ */
+const EMPTY_PARAMS: Record<string, string | string[]> = {}
+
+/**
  * 获取 loadingComponent，优先使用路由级别的，否则使用全局的
  */
 function getLoadingComponent(route: RouteObject, options?: RouterOptions): ReactElement | ComponentType<any> | undefined {
@@ -34,7 +40,7 @@ export function renderRouteChain(
 
   // 获取当前路由的参数（从 match.params 中提取，但需要根据路由链合并所有参数）
   // 对于嵌套路由，参数会合并在一起
-  const params = match?.params ?? {}
+  const params = match?.params ?? EMPTY_PARAMS
   const loadingComponent = getLoadingComponent(route, options)
 
   // 如果是最后一个路由，直接渲染组件（不需要 Outlet）
@@ -74,7 +80,7 @@ export function createRouteElement(route: RouteObject, match?: MatchResult, opti
   // - 带 children（含直达父路由 bare path）→ 渲染匹配的子路由
   // - 无 children（叶子，包括根路由 '/'）→ 候选为空、渲染空，
   //   避免 <Outlet /> 误继承父级候选 → 反复匹配到同一叶子 → 无限递归（堆栈溢出 / 内存溢出）
-  const params = match?.params ?? {}
+  const params = match?.params ?? EMPTY_PARAMS
   const loadingComponent = getLoadingComponent(route, options)
 
   return (

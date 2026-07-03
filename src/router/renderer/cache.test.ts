@@ -1,11 +1,11 @@
 import type { ReactElement } from 'react'
 import type { LocationLike } from '../types'
-import type { CacheMap } from './cache'
+import type { CacheEntry, CacheMap } from './cache'
 import { renderHook } from '@testing-library/react'
 import { createElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LRUCache } from '../utils/LRUCache'
-import { getCachedElement, updateCache, useCacheMap } from './cache'
+import { getCachedElement, setShellEntry, updateCache, useCacheMap } from './cache'
 
 describe('updateCache', () => {
   let cache: CacheMap
@@ -187,5 +187,49 @@ describe('useCacheMap', () => {
     const { result } = renderHook(() => useCacheMap(5))
 
     expect(result.current.maxCacheLen).toBe(5)
+  })
+})
+
+describe('条目 location 引用稳定性（避免值相等的新对象击穿 LocationCtx）', () => {
+  let cache: CacheMap
+  let mockElement: ReactElement
+  let mockLocation: LocationLike
+
+  beforeEach(() => {
+    cache = new LRUCache(100)
+    mockElement = createElement('div', null, 'Test')
+    mockLocation = { pathname: '/test', search: '?q=1', hash: '' }
+  })
+
+  it('getCachedElement：location 三字段等值时沿用旧引用，值变化才换新', () => {
+    updateCache(cache, 'key1', mockElement, mockLocation, 10)
+    const before = cache.get('key1')!.location
+
+    getCachedElement(cache, 'key1', { pathname: '/test', search: '?q=1', hash: '' })
+    expect(cache.get('key1')!.location).toBe(before)
+
+    getCachedElement(cache, 'key1', { pathname: '/test', search: '?q=2', hash: '' })
+    expect(cache.get('key1')!.location).not.toBe(before)
+    expect(cache.get('key1')!.location.search).toBe('?q=2')
+  })
+
+  it('setShellEntry：element / transition / location 全部等值时复用整个旧条目', () => {
+    setShellEntry(cache as unknown as Map<string, CacheEntry>, 'shell', mockElement, mockLocation)
+    const before = cache.get('shell')!
+
+    setShellEntry(cache as unknown as Map<string, CacheEntry>, 'shell', mockElement, { ...mockLocation })
+    expect(cache.get('shell')!).toBe(before)
+    expect(cache.get('shell')!.location).toBe(before.location)
+  })
+
+  it('setShellEntry：element 变化时条目更新，但 location 等值仍沿用旧引用', () => {
+    setShellEntry(cache as unknown as Map<string, CacheEntry>, 'shell', mockElement, mockLocation)
+    const beforeLocation = cache.get('shell')!.location
+
+    const nextElement = createElement('div', null, 'Next')
+    setShellEntry(cache as unknown as Map<string, CacheEntry>, 'shell', nextElement, { ...mockLocation })
+
+    expect(cache.get('shell')!.element).toBe(nextElement)
+    expect(cache.get('shell')!.location).toBe(beforeLocation)
   })
 })

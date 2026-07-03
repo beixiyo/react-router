@@ -1,9 +1,12 @@
 import type { ReactElement } from 'react'
-import type { LocationLike } from '../types'
+import type { LocationLike, RouteObject } from '../types'
 import { useContext } from 'react'
 import { OutletContext, RouterConfigCtx } from '../context'
 import { useLocation } from '../hooks/use-location'
 import { KeepAliveOutlet } from './KeepAliveOutlet'
+
+/** 无子路由时的稳定空候选：每渲染新建 `[]` 会击穿 KeepAliveOutlet 内以 candidates 为 deps 的 memo */
+const EMPTY_ROUTES: RouteObject[] = []
 
 /**
  * Outlet 组件：统一的路由渲染组件
@@ -39,7 +42,7 @@ export function Outlet(): ReactElement {
   // 嵌套节点：以父路由的 children 为候选
   return (
     <KeepAliveOutlet
-      candidates={parentOutlet.parentRoute.children ?? []}
+      candidates={parentOutlet.parentRoute.children ?? EMPTY_ROUTES}
       parentRoute={parentOutlet.parentRoute}
       location={location}
       options={options}

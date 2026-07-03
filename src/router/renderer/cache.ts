@@ -28,12 +28,25 @@ export type CacheMap = LRUCache<string, CacheEntry>
 /** 全局自增序号，仅用于区分「同 key 但已被清/删后重建」的缓存条目 */
 let entrySeq = 0
 
+/** 默认缓存键：模块级常量，保证未配置 cacheKey 时下游 useMemo 的 deps 引用稳定 */
+const DEFAULT_CACHE_KEY = (loc: LocationLike) => loc.pathname
+
+/**
+ * 位置三字段值比较：条目 location 只在值真正变化时才换新引用，
+ * 避免值相等的新对象经 LocationCtx 击穿活跃子树的所有 memo
+ */
+function isSameLocation(a: LocationLike | undefined, b: LocationLike): boolean {
+  return !!a
+    && a.pathname === b.pathname
+    && a.search === b.search
+    && a.hash === b.hash
+}
+
 /**
  * 计算缓存配置
  */
 export function useCacheConfig(options: RouterOptions, location: LocationLike) {
-  const cacheKeyFn = options.cacheKey ?? ((loc: LocationLike) => loc.pathname)
-  const stableCacheKeyFn = useMemo(() => cacheKeyFn, [cacheKeyFn])
+  const stableCacheKeyFn = options.cacheKey ?? DEFAULT_CACHE_KEY
 
   // 使用统一函数判断缓存是否启用
   const cacheEnabled = shouldEnableCache(options)
@@ -130,11 +143,22 @@ export function setShellEntry(
   transition?: RouteTransitionOptions,
 ) {
   const prev = shellCache.get(cacheKey)
+
+  /** 全部字段等值则复用旧条目：引用不变 → 上层 memo 完整 bail-out（非导航渲染零波及） */
+  if (prev
+    && prev.element === element
+    && prev.transition === transition
+    && isSameLocation(prev.location, location)) {
+    return
+  }
+
   shellCache.set(cacheKey, {
     key: cacheKey,
     element,
     lastShown: Date.now(),
-    location: { ...location },
+    location: isSameLocation(prev?.location, location)
+      ? prev!.location
+      : { ...location },
     seq: prev?.seq ?? entrySeq++,
     transition,
   })
@@ -153,7 +177,8 @@ export function getCachedElement(
   if (entry) {
     // 更新 lastShown 时间戳（虽然 LRUCache 已经处理了顺序，但保留此字段以保持兼容性）
     entry.lastShown = Date.now()
-    if (currentLocation) {
+    // 值真正变化才换引用（如同 key 叶子带不同 search 复活），否则沿用旧对象不惊动 LocationCtx 消费者
+    if (currentLocation && !isSameLocation(entry.location, currentLocation)) {
       entry.location = { ...currentLocation }
     }
     return entry.element

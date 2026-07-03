@@ -1,5 +1,5 @@
 import type { NavigateOptions } from './types'
-import { useContext } from 'react'
+import { useCallback, useContext } from 'react'
 import { RouterCtx } from '../context'
 
 /**
@@ -51,11 +51,12 @@ import { RouterCtx } from '../context'
 export function useNavigate() {
   const router = useContext(RouterCtx)
 
-  return (to: string | number, options?: NavigateOptions) => {
+  /** router 实例引用终身恒定 → navigate 引用同样恒定，可安全放入 deps / memo 组件 props */
+  return useCallback((to: string | number, options?: NavigateOptions) => {
     if (!router) {
       console.warn('useNavigate must be used within a RouterProvider')
       return
     }
     router.navigate(to, options)
-  }
+  }, [router])
 }

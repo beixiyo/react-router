@@ -346,8 +346,8 @@ const router = createBrowserRouter({
 | `<RouterProvider router>` | 入口 |
 | `<Outlet />` | 嵌套出口 |
 | `<Link />` / `<NavLink />` | 导航 |
-| `useRouter()` | 实例 |
-| `useNavigate()` | `navigate` 函数 |
+| `useRouter()` | 实例（引用终身恒定，**不随导航重渲染**；读 `.location` / `.navigationDirection` 值新鲜但不触发刷新，需要响应式请用 `useLocation()`） |
+| `useNavigate()` | `navigate` 函数（引用恒定，可安全放入 deps / memo 组件 props） |
 | `useLocation()` | 全局当前 `pathname`、`search`、`hash`，默认跟随真实路由切换 |
 | `useLocation({ scope: 'cache' })` | 当前 keep-alive 缓存 entry 的 `pathname`、`search`、`hash` |
 | `useParams()` | `{ params, query, hash }` |

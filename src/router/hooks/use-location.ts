@@ -21,17 +21,24 @@ export function useLocation(options: UseLocationOptions = {}): LocationLike {
     return router?.location ?? location ?? EMPTY_LOCATION
   })
 
+  /**
+   * 有 router：订阅实例（引用终身恒定 → 只订阅一次，不随导航退订/重订）
+   * deps 刻意不含 ctx location——否则每次上游 Provider 换值都会白白重建一轮订阅
+   */
   useEffect(() => {
-    if (scope !== 'current')
+    if (scope !== 'current' || !router)
       return
-
-    if (!router) {
-      setCurrentLocation(location ?? EMPTY_LOCATION)
-      return
-    }
 
     setCurrentLocation(router.location)
     return router.subscribe(nextLocation => setCurrentLocation(nextLocation))
+  }, [router, scope])
+
+  /** 无 router 的兜底（如测试里裸用 LocationCtx）：跟随 ctx 值 */
+  useEffect(() => {
+    if (scope !== 'current' || router)
+      return
+
+    setCurrentLocation(location ?? EMPTY_LOCATION)
   }, [router, location, scope])
 
   return scope === 'cache'

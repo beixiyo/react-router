@@ -197,17 +197,31 @@ export function KeepAliveOutlet({
     }
 
     return element
-  }, [match, location.pathname, location.search, location.hash, options.routeConfig, options.notFoundComponent, isRoot, generation])
+    /**
+     * deps 刻意不含 search / hash：已核实元素创建链路（route-matcher / route-loader）
+     * 不消费它们——查询参数经 LocationCtx / useLocation 订阅送达页面；
+     * 若纳入，仅 search 变化的导航也会重建整棵元素树、击穿 Wrapper memo
+     */
+  }, [match, location.pathname, options.routeConfig, options.notFoundComponent, isRoot, generation])
 
   /**
    * 本层当前路由实际生效的过渡配置：路由级（就近）与全局字段级合并，
    * 随缓存条目 / bypass 槽位存储——退场中的旧条目用自己的配置播完动画
+   *
+   * 必须锚定引用：合并会产新对象，未 memo 时每渲染换新 →
+   * 击穿 memo(KeepAlive) 并让 RouteTransitionContext 每渲染广播
    */
-  const levelTransition = match
-    ? resolveTransition(isShell
+  const levelRoute = match
+    ? (isShell
         ? getMatchHead(match)
-        : match.route, options)
-    : options.transition
+        : match.route)
+    : undefined
+  const levelTransition = useMemo(
+    () => (levelRoute
+      ? resolveTransition(levelRoute, options)
+      : options.transition),
+    [levelRoute, options],
+  )
 
   /**
    * 渲染期同步缓存（幂等）：把当前层要保活的元素写入对应缓存

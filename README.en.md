@@ -347,8 +347,8 @@ const router = createBrowserRouter({
 | `<RouterProvider router>` | Entry provider |
 | `<Outlet />` | Nested outlet |
 | `<Link />` / `<NavLink />` | Navigation |
-| `useRouter()` | Router instance |
-| `useNavigate()` | `navigate` function |
+| `useRouter()` | Router instance (lifetime-stable reference, **does not re-render on navigation**; reading `.location` / `.navigationDirection` is always fresh but non-reactive — use `useLocation()` for reactivity) |
+| `useNavigate()` | `navigate` function (stable reference, safe for deps / memoized component props) |
 | `useLocation()` | Global current `pathname`, `search`, and `hash`; follows real route changes by default |
 | `useLocation({ scope: 'cache' })` | `pathname`, `search`, and `hash` of the current keep-alive cache entry |
 | `useParams()` | `{ params, query, hash }` |

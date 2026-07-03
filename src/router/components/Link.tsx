@@ -1,4 +1,5 @@
 import type { AnchorHTMLAttributes } from 'react'
+import { useLocation } from '../hooks/use-location'
 import { useRouter } from '../hooks/use-router'
 
 /**
@@ -52,7 +53,12 @@ export function NavLink({
   inactiveClassName?: string
 } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>) {
   const router = useRouter()
-  const isActive = router?.location.pathname === to
+  /**
+   * 激活态必须走 useLocation（响应式订阅）：RouterCtx 下发的是稳定实例、
+   * 不随导航重渲染，读 router.location 虽值新鲜但不会触发本组件刷新
+   */
+  const { pathname } = useLocation()
+  const isActive = pathname === to
 
   // 如果外部提供了类名，使用外部类名；否则使用默认样式
   let cls: string = ''
