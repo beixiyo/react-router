@@ -345,7 +345,7 @@ const router = createBrowserRouter({
 |------|------|
 | `<RouterProvider router>` | 入口 |
 | `<Outlet />` | 嵌套出口 |
-| `<Link />` / `<NavLink />` | 导航 |
+| `<Link />` / `<NavLink />` | 导航；`NavLink` 带激活态（`activeClassName` / `inactiveClassName`），`end` 切换精确 / 前缀匹配（默认前缀，父路径在子路由下仍激活） |
 | `useRouter()` | 实例（引用终身恒定，**不随导航重渲染**；读 `.location` / `.navigationDirection` 值新鲜但不触发刷新，需要响应式请用 `useLocation()`） |
 | `useNavigate()` | `navigate` 函数（引用恒定，可安全放入 deps / memo 组件 props） |
 | `useLocation()` | 全局当前 `pathname`、`search`、`hash`，默认跟随真实路由切换 |

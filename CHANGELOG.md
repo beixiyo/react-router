@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-04
+
 路由过渡动画系统与导航方向感知，及其一轮审查修复。含一处 Breaking（移除 `useNavigation`）
 
 ### 新增
@@ -15,6 +17,7 @@
 - **路由级过渡粒度**：`RouteObject.transition`——与全局配置字段级合并（路由字段优先）、`false` 单独关闭该路由过渡、全局未配置时也可单路由开启；配置随缓存条目 / 退场槽位存储，退场中的页面用自己的配置播完动画
 - **导航方向感知**：`Router.navigationDirection` 与 `RouteTransitionState.direction`（`forward / back / replace`）——基于 `history.state` 位点打点推导，浏览器原生前进 / 后退可感知；方向在 active 切换瞬间快照，动画中途不受后续导航影响
 - `history.state` 上新增 `__routerPos` 位点键（公共暴露面），导出 `NAV_POSITION_KEY` / `RouterHistoryState` 供使用方合并保留
+- **`NavLink` 新增 `end` 配置项**：切换精确 / 前缀匹配。默认前缀匹配——父路径在子路由下仍高亮（`/users` 命中 `/users/1`），按路径段边界匹配、不误命中 `/users-admin`，根路径 `/` 仅在自身激活；传 `end` 走精确匹配
 
 ### 修复
 
@@ -39,6 +42,7 @@
 - **Breaking**：移除 `useNavigation`——RouterProvider 旧架构残留的平行导航实现，绕过守卫 / 方向位点体系且无消费者；请使用 `useRouter()` / `useNavigate()`
 - 过渡 / 方向类型迁移至类型层（`types/transition.ts`），包入口导出不变；核心与 utils 不再反向依赖组件目录
 - Router 实例构造改用属性描述符合并，`location` / `navigationDirection` 为活 getter，新增动态字段无需在 notify 中手动同步
+- `NavLink` 激活匹配默认由「仅精确」改为「前缀」（父路径在子路由下仍激活，同 Vue Router / React Router）；但根路径 `/` 特意仅在自身激活，规避两家默认下根链接点亮全站的坑；需要精确匹配传 `end`
 
 ## [0.1.3] - 2026-06-26
 
