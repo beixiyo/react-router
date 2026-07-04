@@ -32,6 +32,33 @@ describe('useDelayedActive', () => {
     expect(result.current.phase).toBe('exited')
   })
 
+  it('回归：skip 路径下 effectiveActive 每一帧都与 active 同步，不晚一帧（激活不闪空帧）', () => {
+    /**
+     * 逐帧记录 effectiveActive：修复前 effectiveActive = phase !== 'exited'，
+     * 而 skip 路径的 phase 只在 passive effect 里 setPhase，导致 active 翻转当帧
+     * effectiveActive 仍是旧值——激活时先渲染一帧 exited（Suspense 空白）才 reveal。
+     * 稳态断言（其它用例）用 act 冲掉 effect 后只看终态，抓不到这一帧，故单列本用例
+     */
+    const seen: Array<{ active: boolean, effectiveActive: boolean }> = []
+    const { rerender } = renderHook(
+      ({ active }) => {
+        const state = useDelayedActive(active)
+        seen.push({ active, effectiveActive: state.effectiveActive })
+        return state
+      },
+      { initialProps: { active: true } },
+    )
+
+    rerender({ active: false })
+    rerender({ active: true }) // 复活：修复前此处会先记录一帧 { active: true, effectiveActive: false }
+    rerender({ active: false })
+    rerender({ active: true })
+
+    // skip 路径下任何一帧都应 effectiveActive === active；出现不等即为一帧滞后回归
+    const lagged = seen.filter(s => s.active !== s.effectiveActive)
+    expect(lagged).toEqual([])
+  })
+
   it('失活时先进入 exiting 窗口，effectiveActive 仍为 true，调用 finishExit 后才真正失活', () => {
     const transition: RouteTransitionOptions = { exitTimeout: 1000 }
     const { result, rerender } = renderHook(

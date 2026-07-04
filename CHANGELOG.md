@@ -23,6 +23,7 @@
 - **中间件 `next(path)` 字符串重定向**：重定向即接管本次导航（短路外层），URL 不再被覆写回原目标、方向不再被外层覆盖
 - **重定向位点账本**：push 中被守卫重定向按实际历史操作递增位点（方向仍记 `replace`）；popstate 源被重定向时位点同步到浏览器恢复的条目——两者均避免相邻同位点条目把真实后退误判为回声
 - **挂载即失活的 KeepAlive** 不再假走退场窗口、误触发 `onExited`
+- **未接入过渡时不再晚一帧**：`useDelayedActive` 的 skip 路径（无 `transition` 或 reduced-motion）此前 `effectiveActive` 派生自 effect 里 `setPhase` 的 phase，`active` 翻转当帧仍是旧值——激活（如 keep-alive 缓存页复活）会先渲染一帧空白再 reveal；改为渲染期同步跟随 `active`，恢复「逐帧零差异」承诺（新增逐帧回归用例锁定）
 - PageTransition 参考实现：缓存页复活首帧不再闪现终态（`useLayoutEffect` 复位）；子元素 `transitionend` 冒泡不再误触发 `finishExit` / `finishEnter`
 
 ### 性能（memo / 引用稳定性专项）

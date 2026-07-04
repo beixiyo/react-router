@@ -19,10 +19,15 @@ export function useDelayedActive(
   onExited?: () => void,
   direction?: NavigationDirection,
 ) {
+  /**
+   * 是否跳过过渡窗口（未配置 transition，或遵循 reduced-motion 且命中）。
+   * 在渲染期同步计算，使 skip 路径下 effectiveActive 直接跟随 active、
+   * 不经 effect 里 setPhase 的 phase——否则激活时会晚一帧才 reveal（回归）
+   */
+  const skip = !transition
+    || (transition.respectReducedMotion !== false && prefersReducedMotion())
+
   const [phase, setPhase] = useState<RouteTransitionPhase>(() => {
-    /** 与 effect 的 skipTransition 判定保持一致，reduced-motion 用户首帧即为终态，不闪一帧隐藏 */
-    const skip = !transition
-      || (transition.respectReducedMotion !== false && prefersReducedMotion())
     if (skip) {
       return active
         ? 'entered'
@@ -64,8 +69,6 @@ export function useDelayedActive(
     onExitedRef.current?.()
   }, [clearTimer])
 
-  const hasTransition = Boolean(transition)
-
   useEffect(() => {
     const activeChanged = lastActiveRef.current !== active
     lastActiveRef.current = active
@@ -74,10 +77,7 @@ export function useDelayedActive(
     clearTimer()
     setCapturedDirection(directionRef.current)
 
-    const skipTransition = !transition
-      || (transition.respectReducedMotion !== false && prefersReducedMotion())
-
-    if (skipTransition) {
+    if (skip) {
       setPhase(active
         ? 'entered'
         : 'exited')
@@ -95,7 +95,7 @@ export function useDelayedActive(
       timerRef.current = setTimeout(() => {
         if (seqRef.current === mySeq)
           finishEnter()
-      }, transition.enterTimeout ?? DEFAULT_TIMEOUT)
+      }, transition?.enterTimeout ?? DEFAULT_TIMEOUT)
     }
     else {
       /**
@@ -110,23 +110,27 @@ export function useDelayedActive(
       timerRef.current = setTimeout(() => {
         if (seqRef.current === mySeq)
           finishExit()
-      }, transition.exitTimeout ?? DEFAULT_TIMEOUT)
+      }, transition?.exitTimeout ?? DEFAULT_TIMEOUT)
     }
 
     return clearTimer
   }, [
     active,
-    hasTransition,
+    skip,
     transition?.enterTimeout,
     transition?.exitTimeout,
-    transition?.respectReducedMotion,
     clearTimer,
     finishEnter,
     finishExit,
   ])
 
-  /** 唯一真相源是 phase：仅在退场彻底完成后才视为失活（exiting 期间保持挂载播动画） */
-  const effectiveActive = phase !== 'exited'
+  /**
+   * skip 路径同步跟随 active（无一帧滞后）；过渡路径以 phase 为唯一真相源，
+   * exiting 期间保持挂载播动画，直到退场彻底完成后（phase 变 exited）才视为失活
+   */
+  const effectiveActive = skip
+    ? active
+    : phase !== 'exited'
 
   return { effectiveActive, phase, finishEnter, finishExit, direction: capturedDirection }
 }
